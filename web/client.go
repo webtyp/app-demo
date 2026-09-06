@@ -9,6 +9,7 @@ import (
 
 	// Global form skin: one import at the composition root makes EVERY form in the
 	// app render as labeled fieldset boxes (CSS-only, collected via SSR).
+	_ "github.com/tinywasm/app-demo/config" // registers the Spanish dictionary — see config/lang.go
 	"github.com/tinywasm/app-demo/modules/about"
 	"github.com/tinywasm/app-demo/modules/devices"
 	"github.com/tinywasm/app-demo/modules/medicalhistory"

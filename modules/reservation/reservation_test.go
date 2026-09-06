@@ -5,6 +5,7 @@ package reservation
 import (
 	"testing"
 
+	"github.com/tinywasm/time"
 	"github.com/tinywasm/view"
 )
 
@@ -47,5 +48,18 @@ func TestByDayFilter(t *testing.T) {
 	}
 	if itemsOther[0].Label != "Diego Castro" {
 		t.Errorf("expected label 'Diego Castro', got %q", itemsOther[0].Label)
+	}
+}
+
+// TestSeedIncludesToday cubre el bug "hoy no se puede elegir": el calendario
+// solo hace clicables los días con al menos una reserva, así que el seed debe
+// traer reservas dated today — relativas a time.Now, nunca fijas, o el demo
+// abre cada día con el hoy inerte.
+func TestSeedIncludesToday(t *testing.T) {
+	pres := byDay{view.New(&reservationStore{db: reservationDB}, &Reservation{}, view.WithTitle("t"))}
+	today := time.FormatDate(time.Now())
+	items := pres.Filter(today)
+	if len(items) == 0 {
+		t.Fatalf("expected at least 1 seeded item for today (%s), got none", today)
 	}
 }

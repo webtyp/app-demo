@@ -17,6 +17,18 @@ in a running app.
   (exercises `CanView`), mock brand/identity, `themetoggle` user action, and
   the `fieldset` global form skin.
 
+## Translations
+
+`config/lang.go` is the demo's one dictionary: it registers the
+English→Spanish words the framework's own chrome needs (`layout/crudview`'s
+confirm dialog, `components/calendarslider`'s month/weekday names, …) via
+`github.com/tinywasm/fmt/lang`, and activates Spanish
+(`lang.OutLang(lang.ES)`). Libraries never hardcode a language themselves —
+they render an English key through `lang.Translate(...)`; this file is what
+turns that into Spanish for the demo. `web/client.go` blank-imports
+`config` so the registration actually runs. Adding a module whose framework
+component has its own translatable chrome? Add its words to this same file.
+
 ## Run
 
     tinywasm            # from this repo; dev server :8080, MCP :6060

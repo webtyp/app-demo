@@ -5,6 +5,7 @@ import (
 	"github.com/tinywasm/orm"
 	"github.com/tinywasm/storage"
 	"github.com/tinywasm/storage/mem"
+	"github.com/tinywasm/time"
 
 	. "github.com/tinywasm/fmt"
 )
@@ -13,7 +14,7 @@ var reservationDB = newSeededReservationDB()
 
 func newSeededReservationDB() *orm.DB {
 	db := orm.New(mem.New())
-	for _, r := range []*Reservation{
+	seed := []*Reservation{
 		{Id: "100", PatientRun: "12345678-9", PatientName: "María Gonzalez", PatientBirthday: "1985-04-12", PatientContact: "+56912345678", Day: "2026-09-10", Hour: "09:00", Detail: "Consulta general", Status: "confirmed"},
 		{Id: "101", PatientRun: "98765432-1", PatientName: "Juan Pérez", PatientBirthday: "1990-08-23", PatientContact: "juan@example.com", Day: "2026-09-10", Hour: "10:30", Detail: "Revisión exámenes", Status: "attended"},
 		{Id: "102", PatientRun: "11223344-5", PatientName: "Ana Silva", PatientBirthday: "1978-11-05", PatientContact: "+56987654321", Day: "2026-09-10", Hour: "11:15", Detail: "Control rutinario", Status: ""},
@@ -22,8 +23,31 @@ func newSeededReservationDB() *orm.DB {
 		{Id: "105", PatientRun: "17889900-1", PatientName: "Pedro Soto", PatientBirthday: "1982-12-14", PatientContact: "+56955443322", Day: "2026-09-11", Hour: "11:00", Detail: "Seguimiento tratamiento", Status: ""},
 		{Id: "106", PatientRun: "18990011-2", PatientName: "Sofia Rojas", PatientBirthday: "1998-03-22", PatientContact: "+56966778899", Day: "2026-09-11", Hour: "15:30", Detail: "Consulta inicial", Status: "attended"},
 		{Id: "107", PatientRun: "19001122-3", PatientName: "Diego Castro", PatientBirthday: "1975-09-08", PatientContact: "diego@example.com", Day: "2026-09-12", Hour: "10:00", Detail: "Chequeo anual", Status: "confirmed"},
-	} {
+	}
+	for _, r := range seed {
 		_ = db.Create(r)
+	}
+	// Today's bookings: the calendar only lets the user pick days that have
+	// at least one reservation (selectable := use >= 0 in buildDay), so
+	// without these "hoy" would render inert and could never be selected.
+	// Relative to time.Now — not a fixed date — so the demo always opens on
+	// a bookable today. Skipped when today already has seed rows, so the
+	// fixed-day counts other tests assert never shift with the run date.
+	today := time.FormatDate(time.Now())
+	covered := false
+	for _, r := range seed {
+		if r.Day == today {
+			covered = true
+			break
+		}
+	}
+	if !covered {
+		for _, r := range []*Reservation{
+			{Id: "110", PatientRun: "20112233-4", PatientName: "Carmen Vega", PatientBirthday: "1988-05-19", PatientContact: "+56922334455", Day: today, Hour: "09:00", Detail: "Consulta general", Status: "confirmed"},
+			{Id: "111", PatientRun: "21223344-5", PatientName: "Roberto Díaz", PatientBirthday: "1970-12-02", PatientContact: "roberto@example.com", Day: today, Hour: "11:30", Detail: "Control presión", Status: ""},
+		} {
+			_ = db.Create(r)
+		}
 	}
 	return db
 }

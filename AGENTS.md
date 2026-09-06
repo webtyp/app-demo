@@ -93,10 +93,30 @@ this repo (`app-demo` is a leaf; it has nothing to share *to*).
 `app-demo` is a demo, not a public library, so it follows the app convention:
 
 - **UI text in Spanish** — module labels, titles, toast messages, field
-  placeholders (`"Buscar..."`, `"Guardado"`, `"Reserva Hora"`).
+  placeholders (`"Buscar..."`, `"Guardado"`, `"Reserva Hora"`). These are
+  app-supplied literals (`Label()`, `p.Notify(...)`, placeholders) — write
+  them in Spanish directly, no `lang.Translate` involved; that mechanism is
+  for framework-owned chrome text, never for a module's own strings.
 - **Identifiers in English** — `Device`, `deviceDB`, `deviceStore`.
 - **Comments in Spanish** is fine here (the existing modules do it); keep them
   about the framework touch-point.
+- **Libraries are always English — this app is where Spanish gets
+  configured, not the libraries.** A tinywasm library never hardcodes a
+  human language for its OWN chrome text (`layout/crudview`'s confirm
+  dialog, `components/calendarslider`'s month/weekday names, …) — it
+  renders the English canonical word through `lang.Translate(...)`
+  (`github.com/tinywasm/fmt/lang`) and registers nothing itself (see
+  `layout/AGENTS.md`'s "Translatable messages" section). The demo reads in
+  Spanish because **`config/lang.go`** registers that dictionary and
+  activates it (`lang.OutLang(lang.ES)`) — not because any library decided
+  to be Spanish. `web/client.go` blank-imports `config` so that
+  registration actually runs (an `init()` in an unimported package never
+  fires). Every tinywasm-framework app has this same file, for the same
+  reason — see the `project-layout` skill.
+  - Adding a module that pulls in a NEW framework component with its own
+    translatable chrome (check its docs for a `lang.Translate` mention)?
+    Add its English→Spanish words to `config/lang.go`'s dictionary — do not
+    invent a second registration site.
 
 ---
 
