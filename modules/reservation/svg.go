@@ -2,7 +2,7 @@
 
 package reservation
 
-import "github.com/tinywasm/svg/sprite"
+import "webtyp.com/svg/sprite"
 
 func (m *Module) IconSvg() *sprite.Sprite {
 	// Optical-size contract: a glyph should fill ~3/4 of its viewBox with

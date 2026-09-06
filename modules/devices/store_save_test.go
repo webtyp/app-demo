@@ -3,7 +3,7 @@ package devices
 import (
 	"testing"
 
-	"github.com/tinywasm/view"
+	"webtyp.com/view"
 )
 
 // Regression net for the silent save breakage: the store used to assert the

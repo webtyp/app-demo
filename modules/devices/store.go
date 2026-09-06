@@ -1,12 +1,12 @@
 package devices
 
 import (
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/storage"
-	"github.com/tinywasm/storage/mem"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/storage"
+	"webtyp.com/storage/mem"
 
-	. "github.com/tinywasm/fmt"
+	. "webtyp.com/fmt"
 )
 
 // deviceDB is a real (in-memory) CRUD backend for the demo, so the UI's actual

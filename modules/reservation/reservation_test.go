@@ -5,8 +5,8 @@ package reservation
 import (
 	"testing"
 
-	"github.com/tinywasm/time"
-	"github.com/tinywasm/view"
+	"webtyp.com/time"
+	"webtyp.com/view"
 )
 
 func TestByDayFilter(t *testing.T) {

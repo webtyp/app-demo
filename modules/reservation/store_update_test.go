@@ -3,9 +3,9 @@ package reservation
 import (
 	"testing"
 
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/view"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/view"
 )
 
 func TestMemCallerBulkUpdatePatchesOnlyNamedFields(t *testing.T) {

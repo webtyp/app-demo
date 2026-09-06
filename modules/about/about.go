@@ -2,12 +2,12 @@
 package about
 
 import (
-	"github.com/tinywasm/layout/platformd"
-	"github.com/tinywasm/layout/rightpanel"
-	"github.com/tinywasm/svg"
+	"webtyp.com/layout/platformd"
+	"webtyp.com/layout/rightpanel"
+	"webtyp.com/svg"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/html"
+	. "webtyp.com/dom"
+	. "webtyp.com/html"
 )
 
 const Icon = svg.Icon("mod-about")

@@ -1,9 +1,9 @@
 package reservation
 
 import (
-	"github.com/tinywasm/input"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
+	"webtyp.com/input"
+	"webtyp.com/model"
+	"webtyp.com/view"
 )
 
 var reservationDef = model.Definition{

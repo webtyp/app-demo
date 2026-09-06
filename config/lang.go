@@ -1,18 +1,18 @@
 // Package config — this file is the demo's ONE translation dictionary.
 //
-// Every tinywasm library renders its own chrome text (crudview's confirm
+// Every webtyp library renders its own chrome text (crudview's confirm
 // dialog, calendarslider's month/weekday names, …) through
-// github.com/tinywasm/fmt/lang, always keyed in English — a library never
+// webtyp.com/fmt/lang, always keyed in English — a library never
 // hardcodes a human language, never calls lang.RegisterWords itself (see
 // layout/AGENTS.md's "Translatable messages" section and
 // layout/docs/DICTIONARY.md). The demo reads in Spanish because THIS file
-// says so, not because any library is Spanish. Any other tinywasm-framework
+// says so, not because any library is Spanish. Any other webtyp-framework
 // app registers its own words here the same way — config/lang.go is the
 // convention (see the project-layout skill), not something specific to
 // this demo.
 package config
 
-import "github.com/tinywasm/fmt/lang"
+import "webtyp.com/fmt/lang"
 
 func init() {
 	lang.RegisterWords([]lang.DictEntry{

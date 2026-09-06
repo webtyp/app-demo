@@ -4,15 +4,15 @@
 package devices
 
 import (
-	"github.com/tinywasm/components/searchbar"
-	"github.com/tinywasm/layout/crudview"
-	"github.com/tinywasm/layout/platformd"
-	"github.com/tinywasm/svg"
-	"github.com/tinywasm/unixid"
-	"github.com/tinywasm/view"
+	"webtyp.com/components/searchbar"
+	"webtyp.com/layout/crudview"
+	"webtyp.com/layout/platformd"
+	"webtyp.com/svg"
+	"webtyp.com/unixid"
+	"webtyp.com/view"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
+	. "webtyp.com/dom"
+	. "webtyp.com/fmt"
 )
 
 // Icon es la referencia compartida al glifo del módulo. El dibujo vive en svg.go,

@@ -1,11 +1,11 @@
 # app-demo
 <img src="docs/img/badges.svg">
 
-TinyWasm demo app — the `platformd` shell wired with three CRUD modules,
+WebTyp demo app — the `platformd` shell wired with three CRUD modules,
 served from this dedicated repo so the demo never weighs on library `go.mod`s.
 
-The reference demo used by [github.com/tinywasm/layout](https://github.com/tinywasm/layout)
-(`platformd`): a playground to import ANY tinywasm package freely and test it
+The reference demo used by [github.com/webtyp/layout](https://github.com/webtyp/layout)
+(`platformd`): a playground to import ANY webtyp package freely and test it
 in a running app.
 
 ## Modules
@@ -22,7 +22,7 @@ in a running app.
 `config/lang.go` is the demo's one dictionary: it registers the
 English→Spanish words the framework's own chrome needs (`layout/crudview`'s
 confirm dialog, `components/calendarslider`'s month/weekday names, …) via
-`github.com/tinywasm/fmt/lang`, and activates Spanish
+`webtyp.com/fmt/lang`, and activates Spanish
 (`lang.OutLang(lang.ES)`). Libraries never hardcode a language themselves —
 they render an English key through `lang.Translate(...)`; this file is what
 turns that into Spanish for the demo. `web/client.go` blank-imports
@@ -31,15 +31,15 @@ component has its own translatable chrome? Add its words to this same file.
 
 ## Run
 
-    tinywasm            # from this repo; dev server :8080, MCP :6060
+    webtyp            # from this repo; dev server :8080, MCP :6060
 
 ## Layout dependency
 
 The demo consumes the shell via a local replace while layout is in monorepo
 development:
 
-    replace github.com/tinywasm/layout => ../layout
+    replace webtyp.com/layout => ../layout
 
-With no replace, resolution falls back to the published `github.com/tinywasm/layout`
+With no replace, resolution falls back to the published `webtyp.com/layout`
 module. (A clone outside this workspace needs either the published version or
 the `../layout` checkout next to it.)

@@ -2,9 +2,9 @@
 
 package devices
 
-import "github.com/tinywasm/svg/sprite"
+import "webtyp.com/svg/sprite"
 
-// IconSvg registra el glifo del módulo. tinywasm/ssr fusiona el resultado de cada
+// IconSvg registra el glifo del módulo. webtyp/ssr fusiona el resultado de cada
 // IconSvg() del grafo en un único sprite inyectado en <body>.
 //
 // El receptor se instancia como valor cero (`&devices.Module{}`), así que este

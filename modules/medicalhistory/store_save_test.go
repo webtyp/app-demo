@@ -3,7 +3,7 @@ package medicalhistory
 import (
 	"testing"
 
-	"github.com/tinywasm/view"
+	"webtyp.com/view"
 )
 
 // Regression net for the silent save breakage (see devices' equivalent): the

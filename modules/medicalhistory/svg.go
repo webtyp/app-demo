@@ -2,11 +2,11 @@
 
 package medicalhistory
 
-import "github.com/tinywasm/svg/sprite"
+import "webtyp.com/svg/sprite"
 
 // IconSvg registers the module's glyph — the original medicalhistory icon: a
 // clipboard (patient chart) with a checkmark badge and two list lines.
-// tinywasm/ssr fuses every IconSvg() in the graph into one sprite injected
+// webtyp/ssr fuses every IconSvg() in the graph into one sprite injected
 // into <body>.
 //
 // The receiver is instantiated as a zero value (&medicalhistory.Module{}),

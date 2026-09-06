@@ -2,24 +2,24 @@
 // platformd/modules/devices uses for a full CRUD view, with one addition —
 // a selectsearch.SelectSearch fills crudview.Config.Filter instead of the
 // default searchbar.SearchBar. SelectSearch satisfies widget.Filterable
-// (github.com/tinywasm/components v0.5.0) the same generic contract a
+// (webtyp.com/components v0.5.0) the same generic contract a
 // SearchBar fills, so picking a patient from today's agenda narrows the
 // visit list to that patient's fichas — no bespoke wiring in crudview or
 // rightpanel.
 package medicalhistory
 
 import (
-	"github.com/tinywasm/components/selectsearch"
-	"github.com/tinywasm/components/targetdate"
-	"github.com/tinywasm/layout/crudview"
-	"github.com/tinywasm/layout/platformd"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/svg"
-	"github.com/tinywasm/unixid"
-	"github.com/tinywasm/view"
+	"webtyp.com/components/selectsearch"
+	"webtyp.com/components/targetdate"
+	"webtyp.com/layout/crudview"
+	"webtyp.com/layout/platformd"
+	"webtyp.com/model"
+	"webtyp.com/svg"
+	"webtyp.com/unixid"
+	"webtyp.com/view"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
+	. "webtyp.com/dom"
+	. "webtyp.com/fmt"
 )
 
 // requirePatient wraps the generic Presenter view.New builds so Filter(term)

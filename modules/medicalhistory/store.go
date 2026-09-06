@@ -1,12 +1,12 @@
 package medicalhistory
 
 import (
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/storage"
-	"github.com/tinywasm/storage/mem"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/storage"
+	"webtyp.com/storage/mem"
 
-	. "github.com/tinywasm/fmt"
+	. "webtyp.com/fmt"
 )
 
 // Patient is a LOCAL FAKE type for this demo only — today's agenda. A real

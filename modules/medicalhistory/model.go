@@ -1,10 +1,10 @@
 package medicalhistory
 
 import (
-	"github.com/tinywasm/input"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/time"
-	"github.com/tinywasm/view"
+	"webtyp.com/input"
+	"webtyp.com/model"
+	"webtyp.com/time"
+	"webtyp.com/view"
 )
 
 // visitDef mirrors devices' deviceDef exactly: a model built from real

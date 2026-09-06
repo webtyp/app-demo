@@ -1,17 +1,17 @@
 package reservation
 
 import (
-	"github.com/tinywasm/components/calendarslider"
-	"github.com/tinywasm/components/targethour"
-	"github.com/tinywasm/layout/crudview"
-	"github.com/tinywasm/layout/platformd"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/svg"
-	"github.com/tinywasm/unixid"
-	"github.com/tinywasm/view"
+	"webtyp.com/components/calendarslider"
+	"webtyp.com/components/targethour"
+	"webtyp.com/layout/crudview"
+	"webtyp.com/layout/platformd"
+	"webtyp.com/model"
+	"webtyp.com/svg"
+	"webtyp.com/unixid"
+	"webtyp.com/view"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
+	. "webtyp.com/dom"
+	. "webtyp.com/fmt"
 )
 
 type byDay struct {

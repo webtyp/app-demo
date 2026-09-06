@@ -2,7 +2,7 @@
 
 package config
 
-import "github.com/tinywasm/css"
+import "webtyp.com/css"
 
 // goToken exposes GoCyan as a design token so SetGradient can reference it —
 // SetGradient takes Tokens, not raw hex. It is gradient-only: never emitted as

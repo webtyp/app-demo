@@ -1,13 +1,13 @@
 package reservation
 
 import (
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/storage"
-	"github.com/tinywasm/storage/mem"
-	"github.com/tinywasm/time"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/storage"
+	"webtyp.com/storage/mem"
+	"webtyp.com/time"
 
-	. "github.com/tinywasm/fmt"
+	. "webtyp.com/fmt"
 )
 
 var reservationDB = newSeededReservationDB()

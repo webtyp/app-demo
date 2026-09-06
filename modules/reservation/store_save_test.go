@@ -3,7 +3,7 @@ package reservation
 import (
 	"testing"
 
-	"github.com/tinywasm/view"
+	"webtyp.com/view"
 )
 
 func TestMemCallerSaveThroughThePresenter(t *testing.T) {

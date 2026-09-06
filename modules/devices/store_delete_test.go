@@ -3,8 +3,8 @@ package devices
 import (
 	"testing"
 
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
+	"webtyp.com/model"
+	"webtyp.com/view"
 )
 
 // The plural contract, through the real presenter: Delete ships ids (N=1 and

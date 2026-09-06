@@ -3,20 +3,20 @@
 package main
 
 import (
-	"github.com/tinywasm/components/themetoggle"
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
+	"webtyp.com/components/themetoggle"
+	. "webtyp.com/dom"
+	. "webtyp.com/fmt"
 
 	// Global form skin: one import at the composition root makes EVERY form in the
 	// app render as labeled fieldset boxes (CSS-only, collected via SSR).
-	_ "github.com/tinywasm/app-demo/config" // registers the Spanish dictionary — see config/lang.go
-	"github.com/tinywasm/app-demo/modules/about"
-	"github.com/tinywasm/app-demo/modules/devices"
-	"github.com/tinywasm/app-demo/modules/medicalhistory"
-	"github.com/tinywasm/app-demo/modules/reservation"
-	_ "github.com/tinywasm/components/fieldset"
-	"github.com/tinywasm/layout/platformd"
-	"github.com/tinywasm/svg"
+	_ "webtyp.com/app-demo/config" // registers the Spanish dictionary — see config/lang.go
+	"webtyp.com/app-demo/modules/about"
+	"webtyp.com/app-demo/modules/devices"
+	"webtyp.com/app-demo/modules/medicalhistory"
+	"webtyp.com/app-demo/modules/reservation"
+	_ "webtyp.com/components/fieldset"
+	"webtyp.com/layout/platformd"
+	"webtyp.com/svg"
 )
 
 // hiddenModule exists solo para probar CanView: se registra y el chasis no debe
@@ -45,7 +45,7 @@ func (demoBrand) BrandMark() string {
 }
 
 // demoIdentity mocks the login for the demo. In a real application this is
-// whatever github.com/tinywasm/user hands back for the current session — see
+// whatever webtyp.com/user hands back for the current session — see
 // that repository's docs/PLAN.md for the work that makes it satisfy this
 // contract directly.
 type demoIdentity struct{}

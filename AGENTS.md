@@ -1,15 +1,15 @@
-# Agent Guide — `tinywasm/app-demo`
+# Agent Guide — `webtyp/app-demo`
 
 Read this before touching any file here.
 
 `app-demo` is not a throwaway. It is the **worked example** of how you build an
-application with the TinyWasm framework: someone evaluating the framework opens
+application with the WebTyp framework: someone evaluating the framework opens
 `modules/devices/` and reads it top to bottom to learn the pattern. So the code
 here is held to a stricter *readability* bar than a normal app — the code **is**
 the documentation.
 
 The one rule everything below serves: **a Go developer who has never seen
-TinyWasm must be able to read a module and understand it without a guide.**
+WebTyp must be able to read a module and understand it without a guide.**
 
 ---
 
@@ -34,7 +34,7 @@ boilerplate is not "just how it is" — it means a piece of wiring that every
 module repeats belongs *upstream*, in the library that owns that seam. File it
 as a plan against that library (`view`, `orm`, `layout`, …). Do not paste the
 boilerplate a fourth time. This is the framework's own rule:
-`tinywasm/app-releases/docs/CONSTRUCTION_HARNESS.md` — *"A missing contract at a
+`webtyp/app-releases/docs/CONSTRUCTION_HARNESS.md` — *"A missing contract at a
 boundary is a defect in the library, not in the consumer."*
 
 ---
@@ -50,7 +50,7 @@ The demo must look like ordinary, boring Go. Concretely, in module code:
 - **Names say what they are.** `deviceDB`, `newSeededDeviceDB`, `deviceStore` —
   not `db`, `mk`, `c2`.
 - **Comments explain the framework touch-point**, not the Go. Assume the reader
-  knows Go and does not know TinyWasm.
+  knows Go and does not know WebTyp.
 
 ---
 
@@ -101,17 +101,17 @@ this repo (`app-demo` is a leaf; it has nothing to share *to*).
 - **Comments in Spanish** is fine here (the existing modules do it); keep them
   about the framework touch-point.
 - **Libraries are always English — this app is where Spanish gets
-  configured, not the libraries.** A tinywasm library never hardcodes a
+  configured, not the libraries.** A webtyp library never hardcodes a
   human language for its OWN chrome text (`layout/crudview`'s confirm
   dialog, `components/calendarslider`'s month/weekday names, …) — it
   renders the English canonical word through `lang.Translate(...)`
-  (`github.com/tinywasm/fmt/lang`) and registers nothing itself (see
+  (`webtyp.com/fmt/lang`) and registers nothing itself (see
   `layout/AGENTS.md`'s "Translatable messages" section). The demo reads in
   Spanish because **`config/lang.go`** registers that dictionary and
   activates it (`lang.OutLang(lang.ES)`) — not because any library decided
   to be Spanish. `web/client.go` blank-imports `config` so that
   registration actually runs (an `init()` in an unimported package never
-  fires). Every tinywasm-framework app has this same file, for the same
+  fires). Every webtyp-framework app has this same file, for the same
   reason — see the `project-layout` skill.
   - Adding a module that pulls in a NEW framework component with its own
     translatable chrome (check its docs for a `lang.Translate` mention)?
@@ -144,7 +144,7 @@ chassis discovers capabilities by assertion — the module never registers itsel
 ## Running it
 
 ```
-tinywasm          # from this repo — dev server :8080, MCP :6060, hot reload
+webtyp          # from this repo — dev server :8080, MCP :6060, hot reload
 ```
 
 Hot reload picks up every `.go` / `css.go` change automatically. Do **not** run
@@ -153,7 +153,7 @@ Hot reload picks up every `.go` / `css.go` change automatically. Do **not** run
 before publishing, plus the sprite-leak check:
 
 ```
-GOOS=js GOARCH=wasm go list -deps ./web/ | grep tinywasm/svg/sprite   # must be empty
+GOOS=js GOARCH=wasm go list -deps ./web/ | grep webtyp/svg/sprite   # must be empty
 ```
 
 ---
@@ -161,7 +161,7 @@ GOOS=js GOARCH=wasm go list -deps ./web/ | grep tinywasm/svg/sprite   # must be 
 ## Tests
 
 ```
-go install github.com/tinywasm/devflow/cmd/gotest@latest
+go install webtyp.com/devflow/cmd/gotest@latest
 gotest
 ```
 
