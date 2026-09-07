@@ -3,15 +3,19 @@ module webtyp.com/app-demo
 go 1.25.2
 
 require (
+	github.com/veltylabs/appointment_booking v0.0.0
+	github.com/veltylabs/item_catalog v0.0.0
 	webtyp.com/components v0.6.17
 	webtyp.com/css v0.4.21
 	webtyp.com/dom v0.13.10
+	webtyp.com/events v0.0.3
 	webtyp.com/fmt v1.0.0
 	webtyp.com/html v0.0.21
 	webtyp.com/input v0.0.6
 	webtyp.com/layout v0.2.20
 	webtyp.com/model v0.1.8
 	webtyp.com/orm v0.12.1
+	webtyp.com/router v0.1.35
 	webtyp.com/storage v0.0.7
 	webtyp.com/svg v0.3.5
 	webtyp.com/time v0.5.5
@@ -22,11 +26,11 @@ require (
 require (
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/date v0.0.6 // indirect
+	webtyp.com/ddl v0.0.15 // indirect
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/form v0.4.7 // indirect
 	webtyp.com/icons v0.0.3 // indirect
 	webtyp.com/json v0.5.25 // indirect
-	webtyp.com/router v0.1.35 // indirect
 	webtyp.com/widget v0.6.24 // indirect
 )
 
@@ -35,3 +39,11 @@ require (
 // repo is published past the change.
 
 replace webtyp.com/icons => ../icons
+
+// Los módulos de veltylabs aún no publican los changes de la Etapa C — sirve
+// el working tree local (mismo patrón que webtyp.com/components => ../components).
+replace github.com/veltylabs/appointment_booking => ../../veltylabs/modules/appointment_booking
+
+// item_catalog: solo se consume para los slugs canónicos de especialidad
+// (D6 del master) — la Etapa H lo monta como módulo demo completo.
+replace github.com/veltylabs/item_catalog => ../../veltylabs/modules/item_catalog

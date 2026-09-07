@@ -10,7 +10,9 @@ import (
 	// Global form skin: one import at the composition root makes EVERY form in the
 	// app render as labeled fieldset boxes (CSS-only, collected via SSR).
 	_ "webtyp.com/app-demo/config" // registers the Spanish dictionary — see config/lang.go
+	"webtyp.com/app-demo/demoenv"
 	"webtyp.com/app-demo/modules/about"
+	"webtyp.com/app-demo/modules/agenda"
 	"webtyp.com/app-demo/modules/devices"
 	"webtyp.com/app-demo/modules/medicalhistory"
 	"webtyp.com/app-demo/modules/reservation"
@@ -74,10 +76,13 @@ func main() {
 		},
 	}
 
+	env := demoenv.New()
+
 	p.Modules = []platformd.UIModule{
 		devices.New(p),
 		medicalhistory.New(p),
 		reservation.New(p),
+		agenda.New(p, env), // ← editor de agenda sobre appointment_booking real
 		about.New(),
 		hiddenModule{},
 	}
