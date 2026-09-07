@@ -12,16 +12,16 @@ import (
 
 	ab "github.com/veltylabs/appointment_booking"
 
-	"webtyp.com/app-demo/demoenv"
+	"webtyp.com/app-demo/config"
 )
 
 type emptyCtx struct{}
 
 func (emptyCtx) OnCleanup(func()) {}
 
-func testView(t *testing.T, staffId string) (*scheduleView, *demoenv.Env) {
+func testView(t *testing.T, staffId string) (*scheduleView, *config.Env) {
 	t.Helper()
-	env := demoenv.New()
+	env := config.New()
 	v := &scheduleView{p: nil, env: env, sel: dom.NewString(staffId)}
 	v.Init(&emptyCtx{})
 	return v, env
@@ -99,7 +99,7 @@ func TestCallbacks_OnWeeklyChangePersists(t *testing.T) {
 }
 
 // listWeekly lee la plantilla por la op real.
-func listWeekly(t *testing.T, env *demoenv.Env, staffId string) []ab.WorkCalendarWeekly {
+func listWeekly(t *testing.T, env *config.Env, staffId string) []ab.WorkCalendarWeekly {
 	t.Helper()
 	client := ab.NewScheduleClient(env.Caller(), env.TenantID(), staffId)
 	var rows []ab.WorkCalendarWeekly

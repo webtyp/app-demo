@@ -1,7 +1,7 @@
-// Package demoenv — feriados para las excepciones del seed. En producción
+// Package config — feriados para las excepciones del seed. En producción
 // estos vienen de un servicio de feriados; en la demo es una constante local,
 // documentada como tal para que nadie la confunda con datos de un cliente.
-package demoenv
+package config
 
 // holidaysCL2026 son los feriados de Chile del 2026 ("YYYY-MM-DD"), los mismos
 // que un servicio de feriados entregaría. Solo lectura en la UI (ScheduleEditor

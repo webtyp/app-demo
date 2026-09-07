@@ -1,14 +1,9 @@
-// Package demoenv conecta los módulos de dominio REALES de veltylabs a la demo:
-// un *orm.DB en memoria sembrado, los módulos montados en un router.Caller
-// in-proc (router/loopback) y un events.Broker para la comunicación módulo→
-// módulo. Es el seam de composición de la demo — el equivalente que
-// config/client.go hace en mjosefa-cms — no lógica de dominio.
-//
-// Se compila a WASM: el Caller vive client-side y maneja los módulos sin
-// servidor. Todo lo que hay aquí es WASM-safe (loopback es map-free; el único
-// map del árbol es el de events/mock, acotado y auditado — ver la nota O1 del
-// DEMO_AGENDA_MASTER_PLAN, a resolver en la Etapa G).
-package demoenv
+// Package config is the demo's composition root. A single Env (env.go) builds
+// the shared runtime the real-module wrappers consume: an in-memory orm.DB
+// seeded, the veltylabs domain modules mounted on a router/loopback caller,
+// and an events broker. css.go carries the visual theme and lang.go the
+// Spanish dictionary — this root is one place, not three.
+package config
 
 import (
 	"webtyp.com/events"
@@ -38,7 +33,7 @@ type StaffOption struct {
 	SpecialtySlug string
 }
 
-// slugMedicinaGeneral / slugTraumatologia / slugEcografia son los slugs
+// slugTraumatologia / slugMedicinaGeneral / slugEcografia son los slugs
 // canónicos que item_catalog ya define — se derivan de su lista para no
 // inventar especialidades (ver DEMO_AGENDA_MASTER_PLAN D6).
 func slugTraumatologia() string   { return lookupSlug("traumatologia") }
@@ -55,8 +50,37 @@ func lookupSlug(slug string) string {
 	return ""
 }
 
-// Env es la composición completa de la demo. Se construye una sola vez en
-// web/client.go y se comparte entre módulos.
+// Specialties son las especialidades (áreas) canónicas del catálogo — la forma
+// canónica de la demo para el selector de área. La Etapa H sigue leyéndolas de
+// item_catalog (fuente única); aquí se derivan de CanonicalSpecialties.
+func (e *Env) Specialties() []string {
+	out := make([]string, 0, len(itemcatalog.CanonicalSpecialties))
+	for _, cs := range itemcatalog.CanonicalSpecialties {
+		out = append(out, cs.Slug)
+	}
+	return out
+}
+
+// ESCForStaff devuelve el employee_service_config.id primario del médico, o ""
+// si no tiene. La demo ofrece UN servicio por médico (no hay picker de servicio
+// — el Context del crudview es área+médico). Este id es el que consume
+// create_reservation (employee_service_config_id) y list_availability
+// (config_id — NO el del work_calendar_config, ver service.go).
+func (e *Env) ESCForStaff(staffId string) string {
+	switch staffId {
+	case "staff-natasha":
+		return "escNatashaConsulta"
+	case "staff-tony":
+		return "escTonyCirugia"
+	case "staff-thor":
+		return "escThorEcografia"
+	}
+	return ""
+}
+
+// Env es la composición de la demo: un orm.DB en memoria sembrado, los módulos
+// de dominio reales montados, un router.Caller in-proc y un events broker.
+// Se construye UNA vez en web/client.go y se comparte entre módulos.
 type Env struct {
 	caller   router.Caller
 	broker   events.Broker
@@ -67,8 +91,8 @@ type Env struct {
 	holidays []string
 }
 
-// New construye el entorno de la demo: DB en memoria, módulos reales montados
-// en un loopback.Caller, y seed realista.
+// New construye el entorno: DB en memoria, módulos reales en un loopback.Caller
+// y seed realista. Compila a WASM: el Caller vive client-side.
 func New() *Env {
 	db := orm.New(mem.New())
 
@@ -111,8 +135,8 @@ func New() *Env {
 	return env
 }
 
-// Caller es el router.Caller in-proc que despacha contra el appointment_booking
-// real montado.
+// Caller es el router.Caller in-proc que despacha contra los módulos reales
+// montados.
 func (e *Env) Caller() router.Caller  { return e.caller }
 func (e *Env) Broker() events.Broker  { return e.broker }
 func (e *Env) IDs() model.IDGenerator { return e.ids }
@@ -124,27 +148,25 @@ func (e *Env) Staff() []StaffOption   { return e.staff }
 func (e *Env) Holidays2026() []string { return e.holidays }
 
 // seed puebla la DB en memoria vía las ops REALES de appointment_booking cuando
-// existe una op, y con db.Create directo cuando el módulo no la expone (es la
-// única excepción, documentada abajo).
+// existe una op, y con db.Create directo cuando el módulo no la expone (las
+// excepciones están documentadas en cada método).
 func (e *Env) seed() {
 	e.upsertCalendarConfigs()
 	e.upsertWeekly()
 	e.addExceptions()
 	e.seedEmployeeServiceConfig()
+	e.seedReservations()
 }
 
 func (e *Env) upsertCalendarConfigs() {
 	for _, s := range e.staff {
-		call := func(op string, args model.Encodable) {
-			var doneErr error
-			e.caller.Call(op, args, nil, func(err error) { doneErr = err })
-			if doneErr != nil {
-				panic(doneErr)
-			}
-		}
-		call(ab.OpUpsertCalendarConfig, &ab.UpsertCalendarConfigArgs{
+		var doneErr error
+		e.caller.Call(ab.OpUpsertCalendarConfig, &ab.UpsertCalendarConfigArgs{
 			TenantId: TenantID, StaffId: s.ID, Timezone: "America/Santiago", IsActive: true,
-		})
+		}, nil, func(err error) { doneErr = err })
+		if doneErr != nil {
+			panic(doneErr)
+		}
 	}
 }
 
@@ -192,12 +214,12 @@ func (e *Env) addExceptions() {
 
 func (e *Env) seedEmployeeServiceConfig() {
 	// employee_service_config NO tiene op en appointment_booking (no hay UI
-	// staff↔servicio en este módulo) — se siembra directo con db.Create. Su id
-	// es estable y lo consumen list_availability / create_reservation como
-	// config_id. En producción vive en un screen staff↔servicio, fuera de
-	// alcance de la demo.
+	// staff↔servicio en este módulo) — se siembra directo con db.Create. Sus
+	// ids son estables y los consumen create_reservation / list_availability
+	// como config_id. En producción viven en un screen staff↔servicio, fuera
+	// de alcance de la demo.
 	e.db.Create(&ab.EmployeeServiceConfig{
-		Id:          "esc-natasha-consulta",
+		Id:          "escNatashaConsulta",
 		TenantId:    TenantID,
 		StaffId:     "staff-natasha",
 		ServiceId:   "svc-consulta",
@@ -205,10 +227,68 @@ func (e *Env) seedEmployeeServiceConfig() {
 		BufferMin:   0,
 		IsActive:    true,
 	})
+	e.db.Create(&ab.EmployeeServiceConfig{
+		Id:          "escTonyCirugia",
+		TenantId:    TenantID,
+		StaffId:     "staff-tony",
+		ServiceId:   "svc-cirugia",
+		DurationMin: 30,
+		BufferMin:   0,
+		IsActive:    true,
+	})
+	e.db.Create(&ab.EmployeeServiceConfig{
+		Id:          "escThorEcografia",
+		TenantId:    TenantID,
+		StaffId:     "staff-thor",
+		ServiceId:   "svc-ecografia",
+		DurationMin: 30,
+		BufferMin:   0,
+		IsActive:    true,
+	})
+}
+
+// seedReservations siembra reservas CONFIRMED directo con db.Create. La op
+// create_reservation valida el slot contra list_availability, lo que hace un
+// seed por la op frágil; directo es la forma honesta de sembrar datos
+// históricos. Los días caen en la plantilla de Natasha (Lun–Vie).
+func (e *Env) seedReservations() {
+	seeds := []*ab.Reservation{
+		{
+			Id: "res-1", TenantId: TenantID, ClientId: "12345678-9",
+			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
+			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
+			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
+			ReservationDate: unixDay("2026-09-10"), ReservationTime: unixDay("2026-09-10") + 9*3600,
+			LocalStringDate: "2026-09-10", LocalStringTime: "09:00",
+			Notes: "María Gonzalez", UpdatedAt: unixDay("2026-09-09") * 1000000000,
+		},
+		{
+			Id: "res-2", TenantId: TenantID, ClientId: "98765432-1",
+			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
+			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
+			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
+			ReservationDate: unixDay("2026-09-10"), ReservationTime: unixDay("2026-09-10") + 10*3600 + 30*60,
+			LocalStringDate: "2026-09-10", LocalStringTime: "10:30",
+			Notes: "Juan Pérez", UpdatedAt: unixDay("2026-09-09") * 1000000000,
+		},
+		{
+			Id: "res-3", TenantId: TenantID, ClientId: "11223344-5",
+			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
+			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
+			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
+			ReservationDate: unixDay("2026-09-11"), ReservationTime: unixDay("2026-09-11") + 9*3600,
+			LocalStringDate: "2026-09-11", LocalStringTime: "09:00",
+			Notes: "Ana Silva", UpdatedAt: unixDay("2026-09-10") * 1000000000,
+		},
+	}
+	for _, r := range seeds {
+		e.db.Create(r)
+	}
 }
 
 // unixDay convierte "YYYY-MM-DD" a medianoche UTC en segundos (la forma que
-// work_calendar_exception.specific_date almacena).
+// work_calendar_exception.specific_date y reservation.reservation_date
+// almacenan).
 func unixDay(dateStr string) int64 {
 	nano, err := tinytime.ParseDate(dateStr)
 	if err != nil {

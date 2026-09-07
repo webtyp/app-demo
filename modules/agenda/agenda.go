@@ -1,6 +1,6 @@
 // Package agenda es el módulo demo del editor de agenda: un profesional elige
 // su plantilla semanal (7 días) y sus excepciones por fecha, persistido sobre
-// el módulo REAL appointment_booking vía el loopback.Caller de demoenv. No es
+// el módulo REAL appointment_booking vía el loopback.Caller de config. No es
 // un crudview: no hay "listado de registros"; es un editor de una sola forma,
 // montado por un componente propio (scheduleView).
 package agenda
@@ -18,7 +18,7 @@ import (
 
 	ab "github.com/veltylabs/appointment_booking"
 
-	"webtyp.com/app-demo/demoenv"
+	"webtyp.com/app-demo/config"
 )
 
 const Icon = svg.Icon("mod-agenda")
@@ -26,12 +26,12 @@ const Icon = svg.Icon("mod-agenda")
 // Module es el módulo demo del editor de agenda.
 type Module struct {
 	p   *platformd.Platform
-	env *demoenv.Env
+	env *config.Env
 }
 
 // New construye el módulo. Recibe la plataforma (para notificar) y el entorno
 // demo compartido (el caller y el seed de appointment_booking real).
-func New(p *platformd.Platform, env *demoenv.Env) *Module { return &Module{p: p, env: env} }
+func New(p *platformd.Platform, env *config.Env) *Module { return &Module{p: p, env: env} }
 
 var _ platformd.UIModule = (*Module)(nil)
 
@@ -51,7 +51,7 @@ func (m *Module) View() Component {
 type scheduleView struct {
 	Element // value embed
 	p       *platformd.Platform
-	env     *demoenv.Env
+	env     *config.Env
 	sel     *SignalString // staffId seleccionado
 	// editor es el contenedor cuyo hijo (el ScheduleEditor) se rehace al
 	// cambiar de profesional o tras una escritura. Un SignalNodes permite
@@ -203,7 +203,7 @@ func (s *scheduleView) Render() *Element {
 }
 
 // ---------------------------------------------------------------------------
-// Conversiones scheduleeditor ↔ appointment_booking (forma local, DRY en demoenv
+// Conversiones scheduleeditor ↔ appointment_booking (forma local, DRY en config
 // si la Etapa F las repite).
 // ---------------------------------------------------------------------------
 

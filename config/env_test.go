@@ -1,7 +1,7 @@
-// Package demoenv — pruebo la composición: New no paniquea y las ops reales
-// responden al seed. Consumer-shaped: usa los mismos wrappers públicos que el
-// módulo agenda usará.
-package demoenv
+// Package config — pruebo el entorno compartido: no paniquea y las ops reales
+// responden al seed. Consumer-shaped: usa los mismos wrappers públicos que los
+// módulos usarán.
+package config
 
 import (
 	"testing"
@@ -27,6 +27,12 @@ func TestNew_DoesNotPanic(t *testing.T) {
 	if len(env.Holidays2026()) == 0 {
 		t.Fatal("expected national holidays to be seeded")
 	}
+	if len(env.Specialties()) == 0 {
+		t.Fatal("expected canonical specialties to be exposed")
+	}
+	if env.ESCForStaff("staff-natasha") == "" {
+		t.Fatal("expected an employee_service_config for Natasha")
+	}
 }
 
 // TestWeekly_SeededForNatasha: list_weekly_calendar devuelve las 5 filas de
@@ -45,7 +51,6 @@ func TestWeekly_SeededForNatasha(t *testing.T) {
 	if len(rows) != 5 {
 		t.Fatalf("expected 5 weekly rows for Natasha, got %d", len(rows))
 	}
-	// All rows active with the seeded window 09:00–18:00 + break 13:00–14:00.
 	for _, r := range rows {
 		if !r.IsActive || r.WorkStart != 540 || r.WorkFinish != 1080 {
 			t.Errorf("unexpected row: DayOfWeek=%d active=%v %d-%d",
@@ -119,7 +124,6 @@ func TestAgendaRoundTrip(t *testing.T) {
 	env := New()
 	client := ab.NewScheduleClient(env.Caller(), env.TenantID(), "staff-thor")
 
-	// Thor no tiene excepciones; agregar una y verificarla.
 	date := unixDay("2026-11-20")
 	client.AddException(ab.WorkCalendarException{
 		TenantId:      env.TenantID(),
@@ -161,4 +165,22 @@ func TestAgendaRoundTrip(t *testing.T) {
 			t.Fatalf("expected no exceptions after remove, got %d", len(rows))
 		}
 	})
+}
+
+// TestSpecialties_AreCanonical: las áreas vienen del catálogo, no inventadas.
+func TestSpecialties_AreCanonical(t *testing.T) {
+	env := New()
+	specs := env.Specialties()
+	found := false
+	for _, s := range specs {
+		if s == "medicina-general" {
+			found = true
+		}
+		if s == "inventada" {
+			t.Fatal("no invented slugs allowed")
+		}
+	}
+	if !found {
+		t.Fatal("expected medicina-general among the canonical specialties")
+	}
 }

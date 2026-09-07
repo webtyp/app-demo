@@ -1,211 +1,162 @@
-# PLAN_WORK_SCHEDULE — módulo demo "Agenda" (Etapa D del `DEMO_AGENDA_MASTER_PLAN`)
+# PLAN_RESERVATION — reserva de hora v2 (Etapa F del `DEMO_AGENDA_MASTER_PLAN`)
 
-Orquestador: `webtyp/docs/DEMO_AGENDA_MASTER_PLAN.md` §7 fila D.
+Orquestador: `webtyp/docs/DEMO_AGENDA_MASTER_PLAN.md` §7 fila F.
 Índice del repo: [PLAN.md](PLAN.md).
 
-**Depende de (publicado):** `components` con `scheduleeditor` (A), `router` con
-`loopback` (B), `appointment_booking` con `ScheduleClient` + list-ops + evento (C).
-`work_schedule` con `NewView` (C2) es **opcional** — si no está, se omite el
-panel "horario legado".
+**Depende de (publicado):** `router/loopback` (B), `appointment_booking` list-ops
++ `ScheduleClient` + evento (C), `crudview.Config.Context` (E).
 
 ## Objetivo
 
-Primer corte **vertical y testeable en `localhost:8080`**: un módulo demo nuevo
-`modules/agenda/` (Label "Agenda") que deja crear/ajustar la agenda semanal +
-excepciones de cualquier profesional, sobre el módulo **real**
-`appointment_booking`.
+El módulo demo `modules/reservation/` gana:
 
-## 1. `go.mod` — importar módulos reales
+1. Un selector de **área** (especialidad) y **médico** en el slot `Context` del
+   `crudview`. Elegir área filtra los médicos; elegir médico **acota** la lista y
+   el calendario a ese profesional.
+2. Su **lista** y su **calendario de ocupación** se leen de `appointment_booking`
+   real (`list_reservations_by_staff` vía `env.Caller()`), y **crear** una
+   reserva llama `create_reservation`. Los huecos libres son la Etapa G.
 
-```
-require (
-    github.com/veltylabs/appointment_booking v0.0.0
-    github.com/veltylabs/work_schedule v0.0.0   // opcional (C2)
-    webtyp.com/events v0.0.3                     // para el broker in-proc (mock.Broker)
-)
-replace github.com/veltylabs/appointment_booking => ../../veltylabs/modules/appointment_booking
-replace github.com/veltylabs/work_schedule       => ../../veltylabs/modules/work_schedule
-```
+## Restricción clave — NO se usa `appointmentbooking.NewView`
 
-- `webtyp.com/events` hoy **no está** en `app-demo/go.mod` (ni directo ni
-  indirecto) — agregarlo.
-- `webtyp.com/router` hoy es **indirecto**; `demoenv` lo usa directo
-  (`router/loopback`) → pasará a directo tras `go mod tidy`.
-- Mismo patrón de `replace` que `webtyp.com/components => ../components` (ya
-  existe). Quitar cada `replace` cuando el repo esté publicado con el tag.
-- Path de los `replace`: `app-demo` está en `webtyp/app-demo`, los módulos en
-  `veltylabs/modules/*` → `../../veltylabs/modules/<m>` es correcto.
+`appointmentbooking.NewView(caller, tenantId, staffId)` devuelve un `view.Presenter`
+sobre `appointmentbooking.Reservation`, cuyos campos son todos `model.Text()` /
+`model.Int()` — **sin widgets de form**. `crudview.New` hace
+`form.New(cfg.Presenter.Record(), ...)` y "a record with no widgets fails HERE,
+loudly" (crud.go). Además ese Presenter es list/select-only (sin `Saver`).
 
-## 2. `demoenv/` — paquete nuevo (composición compartida)
+Por eso `reservation` **mantiene su record local** (`reservation.Reservation`,
+con `input.X()` en los campos de paciente + día + hora — la forma del
+**formulario**) y un **lister/saver a medida** traduce a/desde las ops reales.
+El `crudview` (calendario `Filter` + `targethour` `List`) no cambia de forma.
 
-Un solo lugar que construye, **una vez**, la infra que todos los wrappers de
-módulo comparten. No es lógica de dominio (es el seam de composición), así que
-no viola "módulos autocontenidos" del AGENTS.md — es el equivalente demo de lo
-que `config/client.go` hace en `mjosefa-cms`.
+## Brecha conocida — sin módulo Directory
 
-```go
-package demoenv
+`appointment_booking.Reservation` referencia al paciente por `client_id` (lo
+valida `DirectoryReader`). La demo **no tiene** módulo Directory. Igual que
+`mjosefa-cms/modules/clinical_encounter` documenta su brecha de picker de
+paciente: aquí el formulario mantiene los campos de paciente como **texto libre**
+(run, nombre, contacto), y al crear se usa el `run` como `client_id` sintético;
+`demoenv` usa un `stubDirectory` que devuelve siempre `true`. Documentarlo en el
+`reservation.go` con un comentario que explique el touch-point y qué haría un
+Directory real. No es deuda oculta: es el trade-off explícito de una demo sin ese
+módulo.
 
-// Env es la composición de la demo: un orm.DB en memoria sembrado, los módulos
-// de dominio reales montados, y un router.Caller in-proc que los maneja.
-type Env struct { /* privado */ }
+## 1. Datos de contexto (en `demoenv`, ampliando la Etapa D)
 
-func New() *Env                    // construye DB mem + módulos + loopback + seed
-func (e *Env) Caller() router.Caller
-func (e *Env) Broker() events.Broker      // events/mock (o events/inproc — ver master O1)
-func (e *Env) IDs() model.IDGenerator     // unixid
-func (e *Env) TenantID() string           // "demo"
-func (e *Env) Staff() []StaffOption        // {ID, Name, SpecialtySlug} — para los pickers
-func (e *Env) Holidays2026() []string      // feriados CL "YYYY-MM-DD", solo lectura
-```
+- **Especialidades = las canónicas de `item_catalog`** (`itemcatalog.CanonicalSpecialties`:
+  `medicina-general`, `dental`, `traumatologia`, `ecografia`, `radiologia`, …).
+  Si la Etapa H ya está, `demoenv.Specialties()` las lee del catálogo real
+  (`OpListSpecialties`); si no, `demoenv` las declara como constante con **esos
+  mismos slugs** (H luego la reemplaza por la lectura). No inventar slugs.
+- Cada `StaffOption` lleva `SpecialtySlug` (uno de esos slugs) — fijado en el
+  seed de la Etapa D.
+- `employee_service_config` seed por (staff, servicio) con `duration_min` real
+  (Natasha consulta 30 min, Tony cirugía 20 min, etc.) — vía `db.Create` con
+  `Id` estable (**no tiene op** — ver Etapa D §5). Este `Id` es el que
+  `create_reservation` recibe como `employee_service_config_id` y el que
+  `list_availability` recibe como su arg `config_id` (revisado en `service.go`:
+  `ListAvailability` hace `GetEmployeeServiceConfig(configId)` — el `config_id`
+  **NO** es el del `work_calendar_config`, es el del `employee_service_config`).
+- Algunas `reservation` sembradas con **`db.Create(&appointmentbooking.Reservation{...})`
+  directo** (documentado): `OpCreateReservation` valida el slot contra
+  `list_availability`, lo que hace el seed frágil. Campos mínimos: `Id`,
+  `TenantId`, `StaffIdsnapshot`, `EmployeeServiceConfigId`, `ReservationDate`
+  (medianoche UTC), `ReservationTime`, `LocalStringDate`, `LocalStringTime`,
+  `DurationMinSnapshot`, `Status: appointmentbooking.StatusConfirmed`, `ClientId`.
 
-Construcción interna:
+## 2. Slot `Context` — selects área + médico
 
-1. `db := orm.New(mem.New())`.
-2. `ids, _ := unixid.NewUnixID()`; `broker := &mock.Broker{}` (`webtyp.com/events/mock`).
-3. Instanciar los módulos reales:
-   - `ab, err := appointmentbooking.New(db, appointmentbooking.Deps{Staff: stubStaff{}, Catalog: stubCatalog{}, Directory: stubDirectory{}, IDs: ids, Publisher: broker})`
-     — `New` devuelve `(*Module, error)`; en la composición `if err != nil { panic(err) }`
-     (como hace `reservation.go` hoy). `stubStaff/stubCatalog/stubDirectory` son
-     `struct{}` que devuelven `true, nil` a `StaffExists`/`ServiceExists`/`ClientExists`
-     (la demo confía en su propio seed — documentarlo con un comentario que diga
-     qué haría un Directory/Staff real).
-   - `ws := workschedule.New(db)` (solo si se incluye C2; devuelve `*Module`).
-4. `caller := loopback.New(ab, ws)` — `ab` y `ws` implementan
-   `router.OperationModule` (verificado: `var _ router.OperationModule` en ambos).
-5. **Seed:**
-   - **No hay tabla `staff` que sembrar para `appointment_booking`**: valida
-     existencia por el `StaffReader` inyectado (el stub devuelve `true`). Basta
-     con `[]StaffOption` en memoria con IDs estables (`"staff-tony"`,
-     `"staff-natasha"`, `"staff-thor"`) + `SpecialtySlug` — usar slugs de
-     `itemcatalog.CanonicalSpecialties` (p.ej. `"traumatologia"`,
-     `"medicina-general"`, `"ecografia"`), **no** slugs inventados (ver
-     `PLAN_CATALOG.md` §2).
-   - **Agenda** (vía las ops reales — ejercita el camino de producción):
-     - Por staff: `caller.Call(OpUpsertCalendarConfig, {TenantId:"demo", StaffId, Timezone:"America/Santiago", IsActive:true}, nil, done)`.
-     - Natasha: `OpUpsertWeeklyCalendar` Lun–Vie (`day_of_week` 1..5),
-       `work_start=540`, `work_finish=1080`, `break_start=780`, `break_finish=840`,
-       `is_active=true`. Tony: Lun/Mié/Vie 08:00–14:00 sin colación
-       (`break_start=break_finish=0`). Thor: sin filas (agenda "recién creada").
-     - 2 excepciones Natasha: `OpAddCalendarException` HOLIDAY 2026-09-18 y
-       2026-09-19 (`specific_date` = medianoche UTC vía `webtyp/time`).
-   - **`employee_service_config`** — **NO tiene op** en `appointment_booking`
-     (revisado: `Repository.InsertEmployeeServiceConfig` existe, ninguna op lo
-     expone). Sembrar con `db.Create(&appointmentbooking.EmployeeServiceConfig{Id: "esc-natasha-consulta", TenantId: "demo", StaffId: "staff-natasha", ServiceId: "svc-consulta", DurationMin: 30, BufferMin: 0, IsActive: true})`
-     — `Id` preseteado y estable (lo necesitan `create_reservation` y
-     `list_availability` como su `config_id`). Documentar: no hay UI para esto en
-     la demo (sería una pantalla staff↔servicio, fuera de alcance).
-   - **`staff` + `workcalendar` legadas** — solo si **C2** está incluido:
-     `work_schedule.GetWorkSchedule` sí lee esas tablas (esquema legado, texto).
-     Sembrarlas con `db.Create(&workschedule.Staff{...})` y
-     `db.Create(&workschedule.WorkCalendar{...})`. Son tablas **distintas** de las
-     de `appointment_booking` (a propósito — ver master §8). En `storage/mem` no
-     hace falta migrar: `db.Create` basta.
-   - `reservation` sembradas → **diferir a la Etapa F** (`OpCreateReservation`
-     valida contra `list_availability`, frágil para seed; F usa `db.Create`).
-6. `Holidays2026()` — lista fija CL: `01-01, 09-18, 09-19, 10-12, 10-31, 11-01,
-   12-08, 12-25` (prefijo `2026-`). Comentario: en producción viene de un
-   servicio de feriados; en la demo es constante.
-
-`demoenv` compila a WASM (el `Caller` vive client-side). `loopback` ya es
-`map`-free (ver su plan). El `map` de `mock.Broker` es lo que pesa la decisión
-**O1** del master — resolver al llegar a la Etapa G, no bloquea D.
-
-## 3. `modules/agenda/` — el módulo demo
-
-Nombre `agenda` (Label "Agenda"), **no** `work_schedule`, para no chocar con el
-import del módulo real `workschedule "github.com/veltylabs/work_schedule"` que
-`demoenv` ya usa. Ficheros (patrón AGENTS.md, planos):
-
-```
-modules/agenda/
-  agenda.go   # Module{p, env}, New, ModelName/Label/Icon, View()
-  svg.go      # //go:build !wasm — glifo (reloj/calendario)
-```
-
-No lleva `model.go`/`store.go`: los datos y la persistencia son de
-`appointment_booking` real vía `env.Caller()`.
-
-`View()` devuelve un componente propio (`type scheduleView struct { dom.Element; ... }`
-con `Init` + `Render`) — **no** un `crudview`, el editor de agenda no es una
-lista CRUD, y así el `Init` da un único punto para construir signals y la
-suscripción a eventos (Etapa G):
-
-- **Picker de profesional** arriba: un `<select>` (o
-  `components/selectsearch.SelectSearch`) con `env.Staff()`. Signal
-  `sel *dom.SignalString` con el staffId elegido (default: el primero).
-- **`scheduleeditor.ScheduleEditor`** debajo. El editor recibe `Week`/`Exceptions`
-  por campo (no es fuente de verdad), así que al cambiar `sel` o tras una
-  escritura hay que **rehacer el subárbol del editor**: montar el
-  `ScheduleEditor` dentro de un contenedor cuyo hijo se bindea a una señal
-  (`dom.Show`/`BindChild`-equivalente) o se reemplaza con la API de `dom` para
-  swap de nodo — NO llamar métodos del componente ya montado. Mismo modelo que
-  `crudview.Reload()`. En cada rebuild:
-  - `client := appointmentbooking.NewScheduleClient(env.Caller(), env.TenantID(), sel.Get())`
-  - `client.Weekly(func(rows, err){...})` → mapear `[]WorkCalendarWeekly` a
-    `[]scheduleeditor.WeeklyRow` (rellenar los 7 días: los que no vengan van
-    `Active:false` con horas 0). `client.Exceptions(fromYearStart, toYearEnd, …)`
-    → `[]scheduleeditor.Exception` (convertir `specific_date` int → "YYYY-MM-DD").
-  - `Holidays: env.Holidays2026()`.
-  - `OnWeeklyChange: func(r) { client.SaveWeeklyRow(toWCW(r), func(err){ notify; refetch }) }`
-  - `OnExceptionAdd: func(x) { client.AddException(toWCE(x), func(err){ notify; refetch }) }`
-  - `OnExceptionRemove: func(id) { client.RemoveException(id, func(err){ notify; refetch }) }`
-- Toasts vía `m.p.Notify(Msg.Success/Error, …, platformd.Auto())` como los demás
-  módulos.
-
-Helpers de conversión (`toWCW`, `toWCE`, `dateToUnix`, `unixToDate`) locales al
-módulo; si aparecen idénticos en la Etapa F, subirlos a `demoenv` (regla DRY).
-
-## 4. `web/client.go`
-
-Una línea nueva en la lista de módulos:
+Un componente `reservationContext` (local al módulo, `Render()` + signals):
 
 ```go
-env := demoenv.New()
-p.Modules = []platformd.UIModule{
-    devices.New(p),
-    medicalhistory.New(p),
-    reservation.New(p),
-    agenda.New(p, env),   // ← nuevo (paquete webtyp.com/app-demo/modules/agenda)
-    about.New(),
-    hiddenModule{},
+type reservationContext struct {
+    dom.Element
+    area   *dom.SignalString   // slug de especialidad, "" = todas
+    staff  *dom.SignalString   // staffId elegido, "" = ninguno
+    staffOptions []demoenv.StaffOption
+    onStaffChange func(staffId string)   // el módulo lo cablea a re-scope + Reload
 }
 ```
 
-(El `env` se pasará también a `reservation` en la Etapa F.)
+- `<select>` de área: opciones = especialidades + "Todas". `onchange` → set
+  `area`, y recomputar las opciones del segundo select.
+- `<select>` de médico: opciones = `staffOptions` filtradas por `area`
+  (`SpecialtySlug == area` o todas si `area == ""`). `onchange` → set `staff` +
+  `onStaffChange(staff.Get())`.
+- CSS-first donde se pueda; el filtrado del segundo select sí necesita re-render
+  de sus `<option>` → bindear con `BindChildrenFunc`/equivalente sobre `area`.
 
-## 5. `config/lang.go`
+Se pasa a `crudview.Config.Context`. **No** es `widget.Filterable` (ver Etapa E):
+el módulo cablea `onStaffChange` a mano.
 
-Si `scheduleeditor` renderiza chrome traducible (revisar su doc: etiquetas de
-tipo de excepción "Closed"/"Special hours"/"Blocked", días de semana), agregar
-sus claves EN→ES al diccionario. No inventar una segunda `RegisterWords`.
+## 3. Lister/saver a medida (sobre el record local)
+
+- `Config.Presenter` = `view.New(<lister a medida>, &reservation.Reservation{}, view.WithTitle(...))`,
+  envuelto en el `byDay` que ya existe (o su equivalente). El `crudview`
+  (calendar `Filter`, `targethour` `List`) no cambia.
+- **Un solo servicio por médico en la demo:** no hay picker de servicio (el
+  `Context` es área+médico). `demoenv` expone `ESCForStaff(staffId) string` → el
+  `employee_service_config.id` primario de ese médico (del seed). Documentarlo;
+  un picker de servicio sería una ampliación.
+- El lister:
+  - `List()` → `env.Caller().Call(OpListReservationsByStaff, {TenantId, StaffId: ctx.staff.Get(), From, To}, &ReservationList{}, done)`
+    (rango = un rango amplio fijo, p.ej. el año). `ctx.staff == ""` → lista vacía
+    (como `medicalhistory` sin paciente). Mapea cada `appointmentbooking.Reservation`
+    → `reservation.Reservation` local (`Hour = LocalStringTime`,
+    `Day = LocalStringDate`, `PatientName`/`PatientRun` desde `Notes` o el sidecar,
+    `Status` traducido).
+  - `Filter(term)` (term = "YYYY-MM-DD" del calendario) → filtra en cliente por
+    fecha, como hoy hace `byDay`.
+  - `Save(rec)` → resuelve `employee_service_config_id = env.ESCForStaff(ctx.staff.Get())`
+    + `slot_start_utc` desde (día del calendario, `rec.Hour`) con `webtyp/time`, y
+    `env.Caller().Call(OpCreateReservation, {TenantId, ClientId: rec.PatientRun,
+    CreatorUserId: "demo", EmployeeServiceConfigId, SlotStartUtc, Notes: <paciente serializado>}, nil, done)`.
+    `ErrSlotTaken`/`ErrConflict` (status 409) → toast de error, sin crash ni
+    duplicado.
+- `onStaffChange` del `Context` → `crudview.Reload()` + limpiar selección.
+- `view.Item` para `targethour`: `LeadMain = Hour`, `Label = PatientName`,
+  `Description` = estado ES (`PENDING`→"", `CONFIRMED`→"Confirmada",
+  `COMPLETED`→"Atendida"). `StatusOf` según ese estado.
+
+## 4. `web/client.go`
+
+`reservation.New(p)` pasa a `reservation.New(p, env)` (mismo `env` que
+`work_schedule`).
+
+## 5. Limpieza
+
+- `modules/reservation/model.go`: el `Reservation` local **se conserva** — es la
+  forma del formulario (widgets de paciente/día/hora). Se le puede agregar un
+  campo `Area`/`Doctor` informativo si ayuda, pero el scope real lo lleva el
+  `Context`, no el record.
+- `modules/reservation/store.go`: el `reservationStore` local y su `orm.DB`
+  sembrado **se eliminan** — la lista/creación van por `env.Caller()`. Los
+  helpers de seed que sigan siendo útiles migran a `demoenv`.
+- `reservation_test.go` / `store_*_test.go`: reescribir para el nuevo flujo
+  (crear vía op real, listar por staff, filtrar por día).
 
 ## Tests (`gotest`)
 
-- `demoenv_test.go` — `New()` no paniquea; `Caller()` responde
-  `OpListWeeklyCalendar` para Natasha con 5 filas; `OpListExceptions` con 2.
-- `modules/agenda/agenda_test.go` — `View()` renderiza el picker
-  con 3 opciones; con `sel` = Natasha el árbol contiene la grilla de 7 días y
-  las horas 09:00/18:00 en la fila del lunes. Un `OnWeeklyChange` simulado llama
-  a la op de upsert (verificable releyendo `OpListWeeklyCalendar`).
-- Consumer-shaped: manejar el flujo alta-excepción end-to-end contra el
-  `appointment_booking` real (add → list muestra la nueva → remove → ya no está).
+- `TestContext_AreaFiltersStaff` — `area="ME"` → el select de médico solo lista
+  Natasha (y quien más sea Medicina).
+- `TestList_ScopedByStaff` — con staff = Natasha, la lista trae solo sus
+  reservas; staff = "" → vacía.
+- `TestCreate_GoesThroughRealOp` — un save con día+hora válidos crea una
+  reserva que luego aparece en `OpListReservationsByStaff`.
+- `TestCreate_SlotTaken` — crear sobre un slot ocupado → toast de error, sin
+  duplicado.
 
 ## Criterios de aceptación
 
-- `gotest ./...` verde en `app-demo`.
-- `GOOS=js GOARCH=wasm go build ./web/` OK; `go list -deps ./web/ | grep webtyp/svg/sprite` vacío.
-- En `localhost:8080` (daemon `webtyp` corriendo): el módulo "Agenda" aparece en
-  el rail; elegir Natasha muestra su semana; activar el sábado con 10:00–13:00 y
-  Guardar → toast; recargar el módulo (no la página) → persiste. Agregar
-  excepción "Cerrado" un día → aparece en la lista y marcada en el calendario;
-  el 18 y 19 de septiembre ya vienen como feriado, no editables.
-- `README.md` de `app-demo` lista el módulo nuevo y explica el `demoenv` +
-  el `replace` a los módulos reales. `AGENTS.md` si cambia la forma (nuevo tipo
-  de módulo: wrapper sobre módulo real + `demoenv`).
+- `gotest ./...` verde; build WASM OK; sin fuga de sprite.
+- En `localhost:8080`: elegir "Medicina" acota el select de médicos; elegir
+  Natasha + un día muestra sus reservas de ese día en `targethour`; crear una
+  reserva la agrega a la lista.
+- `README.md` de `app-demo` actualizado (reservation ahora sobre módulo real +
+  brecha Directory documentada).
 
 ## Fuera de alcance
 
-- Selects de área/médico en `reservation` (Etapa F).
-- Recalcular `reservation` al cambiar la agenda (Etapa G).
-- Panel "horario legado" (`work_schedule.NewView`) si C2 no está listo.
+- Huecos libres reservables + reacción al evento `schedule.changed` (Etapa G).
+- Un módulo Directory real.
