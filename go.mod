@@ -3,7 +3,7 @@ module webtyp.com/app-demo
 go 1.25.2
 
 require (
-	webtyp.com/components v0.6.16
+	webtyp.com/components v0.6.17
 	webtyp.com/css v0.4.21
 	webtyp.com/dom v0.13.10
 	webtyp.com/fmt v1.0.0
@@ -33,7 +33,5 @@ require (
 // Local replaces for unreleased work: the daemon serves these live, so no
 // publish is needed to verify in the running demo. Drop each line once its
 // repo is published past the change.
-
-replace webtyp.com/components => ../components
 
 replace webtyp.com/icons => ../icons
