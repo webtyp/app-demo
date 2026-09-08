@@ -13,6 +13,7 @@ import (
 	"webtyp.com/app-demo/modules/about"
 	"webtyp.com/app-demo/modules/agenda"
 	"webtyp.com/app-demo/modules/devices"
+	"webtyp.com/app-demo/modules/itemcatalogdemo"
 	"webtyp.com/app-demo/modules/medicalhistory"
 	"webtyp.com/app-demo/modules/reservation"
 	_ "webtyp.com/components/fieldset"
@@ -80,8 +81,10 @@ func main() {
 	p.Modules = []platformd.UIModule{
 		devices.New(p),
 		medicalhistory.New(p),
-		reservation.New(p, env), // ← sobre appointment_booking real
-		agenda.New(p, env),      // ← editor de agenda sobre appointment_booking real
+		reservation.New(p, env),   // ← sobre appointment_booking real
+		agenda.New(p, env),        // ← editor de agenda sobre appointment_booking real
+		itemcatalogdemo.NewCatalog(p, env),     // ← catálogo real, crudview sin config custom
+		itemcatalogdemo.NewSpecialties(p, env), // ← especialidades reales
 		about.New(),
 		hiddenModule{},
 	}

@@ -40,9 +40,6 @@ require (
 
 replace webtyp.com/icons => ../icons
 
-// El loopback responde "{}" para ops sin args (fix del arnés) — sirve el
-// working tree de router hasta publicarlo; luego se quita este replace.
-
 // Los módulos de veltylabs aún no publican los changes de la Etapa C — sirve
 // el working tree local (mismo patrón que webtyp.com/components => ../components).
 replace github.com/veltylabs/appointment_booking => ../../veltylabs/modules/appointment_booking

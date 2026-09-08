@@ -1,162 +1,125 @@
-# PLAN_RESERVATION — reserva de hora v2 (Etapa F del `DEMO_AGENDA_MASTER_PLAN`)
+# PLAN_CATALOG — módulo demo `item_catalog` real (Etapa H del `DEMO_AGENDA_MASTER_PLAN`)
 
-Orquestador: `webtyp/docs/DEMO_AGENDA_MASTER_PLAN.md` §7 fila F.
+Orquestador: `webtyp/docs/DEMO_AGENDA_MASTER_PLAN.md` §7 fila H.
 Índice del repo: [PLAN.md](PLAN.md).
 
-**Depende de (publicado):** `router/loopback` (B), `appointment_booking` list-ops
-+ `ScheduleClient` + evento (C), `crudview.Config.Context` (E).
+**Depende de (publicado):** `router/loopback` (B), `crudview.Config.Context` (E)
+— este último solo si el catálogo usa el slot para "Área/Especialidad"; si no,
+solo B.
 
 ## Objetivo
 
-El módulo demo `modules/reservation/` gana:
+Un módulo demo `modules/item_catalog/` que monta el módulo **real**
+`github.com/veltylabs/item_catalog` (`NewView` + `NewSpecialtyView` ya existen)
+con datos sembrados. Es la prueba de que el layout `crudview` **se reutiliza sin
+bifurcar** entre `item_catalog`, `work_schedule` y `appointment_booking`
+(objetivo del usuario: "no un layout por módulo").
 
-1. Un selector de **área** (especialidad) y **médico** en el slot `Context` del
-   `crudview`. Elegir área filtra los médicos; elegir médico **acota** la lista y
-   el calendario a ese profesional.
-2. Su **lista** y su **calendario de ocupación** se leen de `appointment_booking`
-   real (`list_reservations_by_staff` vía `env.Caller()`), y **crear** una
-   reserva llama `create_reservation`. Los huecos libres son la Etapa G.
+## 1. `go.mod`
 
-## Restricción clave — NO se usa `appointmentbooking.NewView`
-
-`appointmentbooking.NewView(caller, tenantId, staffId)` devuelve un `view.Presenter`
-sobre `appointmentbooking.Reservation`, cuyos campos son todos `model.Text()` /
-`model.Int()` — **sin widgets de form**. `crudview.New` hace
-`form.New(cfg.Presenter.Record(), ...)` y "a record with no widgets fails HERE,
-loudly" (crud.go). Además ese Presenter es list/select-only (sin `Saver`).
-
-Por eso `reservation` **mantiene su record local** (`reservation.Reservation`,
-con `input.X()` en los campos de paciente + día + hora — la forma del
-**formulario**) y un **lister/saver a medida** traduce a/desde las ops reales.
-El `crudview` (calendario `Filter` + `targethour` `List`) no cambia de forma.
-
-## Brecha conocida — sin módulo Directory
-
-`appointment_booking.Reservation` referencia al paciente por `client_id` (lo
-valida `DirectoryReader`). La demo **no tiene** módulo Directory. Igual que
-`mjosefa-cms/modules/clinical_encounter` documenta su brecha de picker de
-paciente: aquí el formulario mantiene los campos de paciente como **texto libre**
-(run, nombre, contacto), y al crear se usa el `run` como `client_id` sintético;
-`demoenv` usa un `stubDirectory` que devuelve siempre `true`. Documentarlo en el
-`reservation.go` con un comentario que explique el touch-point y qué haría un
-Directory real. No es deuda oculta: es el trade-off explícito de una demo sin ese
-módulo.
-
-## 1. Datos de contexto (en `demoenv`, ampliando la Etapa D)
-
-- **Especialidades = las canónicas de `item_catalog`** (`itemcatalog.CanonicalSpecialties`:
-  `medicina-general`, `dental`, `traumatologia`, `ecografia`, `radiologia`, …).
-  Si la Etapa H ya está, `demoenv.Specialties()` las lee del catálogo real
-  (`OpListSpecialties`); si no, `demoenv` las declara como constante con **esos
-  mismos slugs** (H luego la reemplaza por la lectura). No inventar slugs.
-- Cada `StaffOption` lleva `SpecialtySlug` (uno de esos slugs) — fijado en el
-  seed de la Etapa D.
-- `employee_service_config` seed por (staff, servicio) con `duration_min` real
-  (Natasha consulta 30 min, Tony cirugía 20 min, etc.) — vía `db.Create` con
-  `Id` estable (**no tiene op** — ver Etapa D §5). Este `Id` es el que
-  `create_reservation` recibe como `employee_service_config_id` y el que
-  `list_availability` recibe como su arg `config_id` (revisado en `service.go`:
-  `ListAvailability` hace `GetEmployeeServiceConfig(configId)` — el `config_id`
-  **NO** es el del `work_calendar_config`, es el del `employee_service_config`).
-- Algunas `reservation` sembradas con **`db.Create(&appointmentbooking.Reservation{...})`
-  directo** (documentado): `OpCreateReservation` valida el slot contra
-  `list_availability`, lo que hace el seed frágil. Campos mínimos: `Id`,
-  `TenantId`, `StaffIdsnapshot`, `EmployeeServiceConfigId`, `ReservationDate`
-  (medianoche UTC), `ReservationTime`, `LocalStringDate`, `LocalStringTime`,
-  `DurationMinSnapshot`, `Status: appointmentbooking.StatusConfirmed`, `ClientId`.
-
-## 2. Slot `Context` — selects área + médico
-
-Un componente `reservationContext` (local al módulo, `Render()` + signals):
-
-```go
-type reservationContext struct {
-    dom.Element
-    area   *dom.SignalString   // slug de especialidad, "" = todas
-    staff  *dom.SignalString   // staffId elegido, "" = ninguno
-    staffOptions []demoenv.StaffOption
-    onStaffChange func(staffId string)   // el módulo lo cablea a re-scope + Reload
-}
+```
+require github.com/veltylabs/item_catalog v0.0.0
+replace github.com/veltylabs/item_catalog => ../../veltylabs/modules/item_catalog
 ```
 
-- `<select>` de área: opciones = especialidades + "Todas". `onchange` → set
-  `area`, y recomputar las opciones del segundo select.
-- `<select>` de médico: opciones = `staffOptions` filtradas por `area`
-  (`SpecialtySlug == area` o todas si `area == ""`). `onchange` → set `staff` +
-  `onStaffChange(staff.Get())`.
-- CSS-first donde se pueda; el filtrado del segundo select sí necesita re-render
-  de sus `<option>` → bindear con `BindChildrenFunc`/equivalente sobre `area`.
+## 2. `demoenv`
 
-Se pasa a `crudview.Config.Context`. **No** es `widget.Filterable` (ver Etapa E):
-el módulo cablea `onStaffChange` a mano.
+Montar `item_catalog` en el `loopback` junto a los demás. `itemcatalog.New`
+devuelve `(*Module, error)` (`if err != nil { panic(err) }`), y `*Module`
+implementa `router.OperationModule` (verificado: `var _ router.OperationModule`
+en `item_catalog/mcp.go`).
 
-## 3. Lister/saver a medida (sobre el record local)
+```go
+ic, err := itemcatalog.New(db, itemcatalog.Deps{IDs: ids, Publisher: broker})
+// panic(err) si err != nil
+caller := loopback.New(ab, ws, ic)
+```
 
-- `Config.Presenter` = `view.New(<lister a medida>, &reservation.Reservation{}, view.WithTitle(...))`,
-  envuelto en el `byDay` que ya existe (o su equivalente). El `crudview`
-  (calendar `Filter`, `targethour` `List`) no cambia.
-- **Un solo servicio por médico en la demo:** no hay picker de servicio (el
-  `Context` es área+médico). `demoenv` expone `ESCForStaff(staffId) string` → el
-  `employee_service_config.id` primario de ese médico (del seed). Documentarlo;
-  un picker de servicio sería una ampliación.
-- El lister:
-  - `List()` → `env.Caller().Call(OpListReservationsByStaff, {TenantId, StaffId: ctx.staff.Get(), From, To}, &ReservationList{}, done)`
-    (rango = un rango amplio fijo, p.ej. el año). `ctx.staff == ""` → lista vacía
-    (como `medicalhistory` sin paciente). Mapea cada `appointmentbooking.Reservation`
-    → `reservation.Reservation` local (`Hour = LocalStringTime`,
-    `Day = LocalStringDate`, `PatientName`/`PatientRun` desde `Notes` o el sidecar,
-    `Status` traducido).
-  - `Filter(term)` (term = "YYYY-MM-DD" del calendario) → filtra en cliente por
-    fecha, como hoy hace `byDay`.
-  - `Save(rec)` → resuelve `employee_service_config_id = env.ESCForStaff(ctx.staff.Get())`
-    + `slot_start_utc` desde (día del calendario, `rec.Hour`) con `webtyp/time`, y
-    `env.Caller().Call(OpCreateReservation, {TenantId, ClientId: rec.PatientRun,
-    CreatorUserId: "demo", EmployeeServiceConfigId, SlotStartUtc, Notes: <paciente serializado>}, nil, done)`.
-    `ErrSlotTaken`/`ErrConflict` (status 409) → toast de error, sin crash ni
-    duplicado.
-- `onStaffChange` del `Context` → `crudview.Reload()` + limpiar selección.
-- `view.Item` para `targethour`: `LeadMain = Hour`, `Label = PatientName`,
-  `Description` = estado ES (`PENDING`→"", `CONFIRMED`→"Confirmada",
-  `COMPLETED`→"Atendida"). `StatusOf` según ese estado.
+Seed vía las ops del catálogo (`OpUpsertItem`, `OpUpsertSpecialty`):
+- **Especialidades: usar las que el módulo real ya define** —
+  `itemcatalog.CanonicalSpecialties` (`Medicina General` `md`, `Dental` `do`,
+  `Traumatología` `tr`, `Podología` `po`, `Laboratorio` `la`, `Ecografía` `ec`,
+  `Radiología` `ra`, …). Sembrar un subconjunto (5–6) vía `OpUpsertSpecialty`, o
+  llamar `MigrateSpecialtiesAndItems("demo")` si es más directo. **No inventar
+  slugs/prefijos nuevos** — Etapas D y F deben referenciar estos.
+- Ítems de catálogo (servicios): 4–5 con `sku` cuyo prefijo (`sku[:2]`) case con
+  una especialidad sembrada — p.ej. `md-consulta` "Consulta médica",
+  `ec-abdominal` "Ecografía abdominal", `ra-torax` "Radiografía de tórax",
+  `tr-control` "Control traumatología". Tipo `S` (service). Nombres inventados.
+- `demoenv` expone `Specialties() []SpecialtyOption` leyendo del catálogo real
+  (`OpListSpecialties`) — **fuente única**. Si D/F habían puesto una constante
+  local de especialidades, esta etapa la reemplaza por esa lectura.
+
+## 3. `modules/item_catalog/`
+
+```
+modules/item_catalog/
+  item_catalog.go   # dos structs UIModule (Catalog, Specialties) + New* + View()
+  svg.go            # //go:build !wasm
+```
+
+**Dos `platformd.UIModule` separados** ("Catálogo" y "Especialidades") — es lo
+que hace `mjosefa-cms` de facto y evita inventar sub-navegación en `platformd`:
+
+```go
+// item_catalog.go
+type catalogMod    struct{ p *platformd.Platform; env *demoenv.Env }
+type specialtyMod  struct{ p *platformd.Platform; env *demoenv.Env }
+func NewCatalog(p *platformd.Platform, env *demoenv.Env) *catalogMod
+func NewSpecialties(p *platformd.Platform, env *demoenv.Env) *specialtyMod
+
+func (m *catalogMod) View() Component {
+    v, _ := crudview.New(crudview.Config{
+        ParentID:  "catalog_item",
+        Presenter: itemcatalog.NewView(m.env.Caller()),  // ← sin Filter/List/Context custom
+        IDs:       m.env.IDs(),
+    })
+    return v
+}
+// specialtyMod.View() igual con itemcatalog.NewSpecialtyView(...) y ParentID "specialty"
+```
+
+La demostración es justamente que ambos usan `crudview.New(Config{})` **sin
+config custom** — el mismo layout que `work_schedule` NO usa (porque su
+contenido no es una lista) y que `reservation` sí extiende (Context + Filter
+calendario). Ese contraste es la lección del §1 del usuario.
 
 ## 4. `web/client.go`
 
-`reservation.New(p)` pasa a `reservation.New(p, env)` (mismo `env` que
-`work_schedule`).
+```go
+itemcatalog.NewCatalog(p, env),      // "Catálogo"
+itemcatalog.NewSpecialties(p, env),  // "Especialidades"
+```
 
-## 5. Limpieza
+## 5. `config/lang.go`
 
-- `modules/reservation/model.go`: el `Reservation` local **se conserva** — es la
-  forma del formulario (widgets de paciente/día/hora). Se le puede agregar un
-  campo `Area`/`Doctor` informativo si ayuda, pero el scope real lo lleva el
-  `Context`, no el record.
-- `modules/reservation/store.go`: el `reservationStore` local y su `orm.DB`
-  sembrado **se eliminan** — la lista/creación van por `env.Caller()`. Los
-  helpers de seed que sigan siendo útiles migran a `demoenv`.
-- `reservation_test.go` / `store_*_test.go`: reescribir para el nuevo flujo
-  (crear vía op real, listar por staff, filtrar por día).
+`item_catalog` real puede traer chrome traducible (radios de tipo
+Service/Product del `itemType()` widget). Agregar EN→ES si aparece en el render.
 
 ## Tests (`gotest`)
 
-- `TestContext_AreaFiltersStaff` — `area="ME"` → el select de médico solo lista
-  Natasha (y quien más sea Medicina).
-- `TestList_ScopedByStaff` — con staff = Natasha, la lista trae solo sus
-  reservas; staff = "" → vacía.
-- `TestCreate_GoesThroughRealOp` — un save con día+hora válidos crea una
-  reserva que luego aparece en `OpListReservationsByStaff`.
-- `TestCreate_SlotTaken` — crear sobre un slot ocupado → toast de error, sin
-  duplicado.
+- `TestCatalog_ListsSeededItems` — `View()` con el catálogo sembrado muestra los
+  5 servicios.
+- `TestSpecialties_ListsSeeded` — 5 especialidades.
+- `TestCrudviewReuse_NoForkNeeded` — assert de que ambos usan
+  `crudview.New(Config{})` sin `Filter`/`List`/`Context` custom (grep en el
+  código del test o comprobación estructural) — documenta que el layout se
+  reutilizó tal cual.
+- Crear un ítem nuevo vía el form → aparece en la lista (op real).
 
 ## Criterios de aceptación
 
 - `gotest ./...` verde; build WASM OK; sin fuga de sprite.
-- En `localhost:8080`: elegir "Medicina" acota el select de médicos; elegir
-  Natasha + un día muestra sus reservas de ese día en `targethour`; crear una
-  reserva la agrega a la lista.
-- `README.md` de `app-demo` actualizado (reservation ahora sobre módulo real +
-  brecha Directory documentada).
+- En `localhost:8080`: "Catálogo" y "Especialidades" en el rail, CRUD funcional
+  sobre el `item_catalog` real.
+- `demoenv` tiene UNA fuente de especialidades (el catálogo real), no una
+  constante duplicada.
+- `README.md` de `app-demo` lista los módulos nuevos y remarca "mismo `crudview`,
+  sin bifurcar" como la lección.
 
 ## Fuera de alcance
 
-- Huecos libres reservables + reacción al evento `schedule.changed` (Etapa G).
-- Un módulo Directory real.
+- `employee_service_config` (la relación staff↔servicio con duración) — eso lo
+  siembra `demoenv` para `appointment_booking`, no es una vista del catálogo.
+- Precios / inventario / cualquier campo de `CatalogItemModel` que el seed no
+  necesite.

@@ -50,15 +50,23 @@ func lookupSlug(slug string) string {
 	return ""
 }
 
-// Specialties son las especialidades (áreas) canónicas del catálogo — la forma
-// canónica de la demo para el selector de área. La Etapa H sigue leyéndolas de
-// item_catalog (fuente única); aquí se derivan de CanonicalSpecialties.
+// Specialties son las especialidades (áreas) del catálogo REAL — la fuente
+// única de la demo para el selector de área. Se leen por OpListSpecialties
+// (el módulo item_catalog montado), no de una constante local.
 func (e *Env) Specialties() []string {
-	out := make([]string, 0, len(itemcatalog.CanonicalSpecialties))
-	for _, cs := range itemcatalog.CanonicalSpecialties {
-		out = append(out, cs.Slug)
+	out := &itemcatalog.SpecialtyList{}
+	var callErr error
+	e.caller.Call(itemcatalog.OpListSpecialties,
+		&itemcatalog.ListSpecialtiesArgs{TenantId: TenantID},
+		out, func(err error) { callErr = err })
+	if callErr != nil {
+		return nil
 	}
-	return out
+	slugs := make([]string, 0, out.Len())
+	for i := 0; i < out.Len(); i++ {
+		slugs = append(slugs, out.At(i).(*itemcatalog.Specialty).Slug)
+	}
+	return slugs
 }
 
 // ESCForStaff devuelve el employee_service_config.id primario del médico, o ""
@@ -86,6 +94,7 @@ type Env struct {
 	broker   events.Broker
 	ids      model.IDGenerator
 	ab       *ab.Module
+	ic       *itemcatalog.Module
 	db       *orm.DB
 	staff    []StaffOption
 	holidays []string
@@ -117,11 +126,17 @@ func New() *Env {
 		panic(err)
 	}
 
+	icMod, err := itemcatalog.New(db, itemcatalog.Deps{IDs: ids, Publisher: broker})
+	if err != nil {
+		panic(err)
+	}
+
 	env := &Env{
-		caller:   loopback.New(abMod),
+		caller:   loopback.WithTenant(TenantID, abMod, icMod),
 		broker:   broker,
 		ids:      ids,
 		ab:       abMod,
+		ic:       icMod,
 		db:       db,
 		holidays: holidaysCL2026(),
 		staff: []StaffOption{
@@ -156,6 +171,7 @@ func (e *Env) seed() {
 	e.addExceptions()
 	e.seedEmployeeServiceConfig()
 	e.seedReservations()
+	e.seedCatalog()
 }
 
 func (e *Env) upsertCalendarConfigs() {
@@ -284,6 +300,104 @@ func (e *Env) seedReservations() {
 	for _, r := range seeds {
 		e.db.Create(r)
 	}
+}
+
+// seedCatalog siembra especialidades + ítems de servicio en el item_catalog
+// real, vía sus ops (ejercita el camino de producción). Las especialidades son
+// un subconjunto de las canónicas del módulo; los ítems usan sku cuyo prefijo
+// case con la especialidad sembrada. Se siembran SIN id (la op create los
+// genera) y luego se mapea slug→id para referenciar en los ítems.
+func (e *Env) seedCatalog() {
+	call := func(op string, args model.Encodable) {
+		var doneErr error
+		e.caller.Call(op, args, nil, func(err error) { doneErr = err })
+		if doneErr != nil {
+			panic(doneErr)
+		}
+	}
+
+	for _, spec := range []itemcatalog.Specialty{
+		{TenantId: TenantID, Prefix: "md", Slug: "medicina-general", Name: "Medicina General", Position: 1, IsPublished: true},
+		{TenantId: TenantID, Prefix: "do", Slug: "dental", Name: "Dental", Position: 2, IsPublished: true},
+		{TenantId: TenantID, Prefix: "tr", Slug: "traumatologia", Name: "Traumatología", Position: 3, IsPublished: true},
+		{TenantId: TenantID, Prefix: "ec", Slug: "ecografia", Name: "Ecografía", Position: 4, IsPublished: true},
+		{TenantId: TenantID, Prefix: "ra", Slug: "radiologia", Name: "Radiología", Position: 5, IsPublished: true},
+	} {
+		call(itemcatalog.OpUpsertSpecialty, &spec)
+	}
+
+	// Mapear slug → id de las especialidades recién creadas.
+	for _, it := range []itemcatalog.CatalogItem{
+		{Sku: "md-consulta", Name: "Consulta médica", Type: itemcatalog.ItemTypeService, IsActive: true, Price: 25000, Currency: "CLP"},
+		{Sku: "ec-abdominal", Name: "Ecografía abdominal", Type: itemcatalog.ItemTypeService, IsActive: true, Price: 45000, Currency: "CLP"},
+		{Sku: "ra-torax", Name: "Radiografía de tórax", Type: itemcatalog.ItemTypeService, IsActive: true, Price: 32000, Currency: "CLP"},
+		{Sku: "tr-control", Name: "Control traumatología", Type: itemcatalog.ItemTypeService, IsActive: true, Price: 30000, Currency: "CLP"},
+		{Sku: "do-limpieza", Name: "Limpieza dental", Type: itemcatalog.ItemTypeService, IsActive: true, Price: 28000, Currency: "CLP"},
+	} {
+		it.TenantId = TenantID
+		it.SpecialtyId = lookupSpecialtyID(e, slugForSKU(it.Sku))
+		call(itemcatalog.OpUpsertItem, &it)
+	}
+}
+
+// slugForSKU deriva el slug de una especialidad desde el prefijo del sku
+// (los dos primeros chars) — la convención canónica de item_catalog.
+func slugForSKU(sku string) string {
+	prefix := sku
+	if len(sku) >= 2 {
+		prefix = sku[:2]
+	}
+	switch prefix {
+	case "md":
+		return "medicina-general"
+	case "do":
+		return "dental"
+	case "tr":
+		return "traumatologia"
+	case "po":
+		return "podologia"
+	case "la":
+		return "laboratorio"
+	case "ec":
+		return "ecografia"
+	case "gi":
+		return "ginecologia-y-obstetricia"
+	case "ca":
+		return "cardiologia"
+	case "ga":
+		return "gastroenterologia"
+	case "of":
+		return "oftalmologia"
+	case "ne":
+		return "neurologia"
+	case "ps":
+		return "psicologia"
+	case "de":
+		return "dermatologia"
+	case "ra":
+		return "radiologia"
+	}
+	return ""
+}
+
+// lookupSpecialtyID devuelve el id de la especialidad del slug dado (scan
+// lineal sobre la lista corta — la regla "cero map en WASM" no permite map).
+func lookupSpecialtyID(e *Env, slug string) string {
+	out := &itemcatalog.SpecialtyList{}
+	var callErr error
+	e.caller.Call(itemcatalog.OpListSpecialties,
+		&itemcatalog.ListSpecialtiesArgs{TenantId: TenantID},
+		out, func(err error) { callErr = err })
+	if callErr != nil {
+		panic(callErr)
+	}
+	for i := 0; i < out.Len(); i++ {
+		sp := out.At(i).(*itemcatalog.Specialty)
+		if sp.Slug == slug {
+			return sp.Id
+		}
+	}
+	return ""
 }
 
 // unixDay convierte "YYYY-MM-DD" a medianoche UTC en segundos (la forma que
