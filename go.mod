@@ -7,7 +7,7 @@ require (
 	github.com/veltylabs/item_catalog v0.0.0
 	github.com/veltylabs/work_schedule v0.0.0
 	webtyp.com/components v0.6.20
-	webtyp.com/css v0.4.21
+	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.12
 	webtyp.com/events v0.0.4
 	webtyp.com/fmt v1.0.0
@@ -22,6 +22,7 @@ require (
 	webtyp.com/time v0.5.5
 	webtyp.com/unixid v0.2.28
 	webtyp.com/view v0.5.2
+	webtyp.com/widget v0.6.24
 )
 
 require (
@@ -32,7 +33,6 @@ require (
 	webtyp.com/form v0.4.8 // indirect
 	webtyp.com/icons v0.0.3 // indirect
 	webtyp.com/json v0.5.25 // indirect
-	webtyp.com/widget v0.6.24 // indirect
 )
 
 // Local replaces for unreleased work: the daemon serves these live, so no
@@ -40,6 +40,18 @@ require (
 // repo is published past the change.
 
 replace webtyp.com/icons => ../icons
+
+// Local replace for unreleased work: components carries the new
+// scheduleeditor OnWeeklyChange signature and the RevealedBy(widget.Open)
+// reveal (the AGENDA_VIEW_FIXES gates). Drop once components publishes the tag.
+replace webtyp.com/components => ../components
+
+// widget's Form-holds-Open widening, consumed transitively by the local
+// components. Drop once widget publishes the tag.
+replace webtyp.com/widget => ../widget
+
+// Local replace for unreleased work: widget/style's ControlBox now emits
+// --control-width, which lives in the local css catalog. Drop once css publishes.
 
 // Los módulos de veltylabs aún no publican los changes de la Etapa C — sirve
 // el working tree local (mismo patrón que webtyp.com/components => ../components).
