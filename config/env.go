@@ -8,6 +8,7 @@ package config
 import (
 	"webtyp.com/events"
 	"webtyp.com/events/mock"
+	. "webtyp.com/fmt"
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/router"
@@ -18,6 +19,7 @@ import (
 
 	ab "github.com/veltylabs/appointment_booking"
 	"github.com/veltylabs/item_catalog"
+	workschedule "github.com/veltylabs/work_schedule"
 )
 
 // TenantID es el id de tenant único de la demo.
@@ -95,6 +97,7 @@ type Env struct {
 	ids      model.IDGenerator
 	ab       *ab.Module
 	ic       *itemcatalog.Module
+	ws       *workschedule.Module
 	db       *orm.DB
 	staff    []StaffOption
 	holidays []string
@@ -131,12 +134,15 @@ func New() *Env {
 		panic(err)
 	}
 
+	wsMod := workschedule.New(db)
+
 	env := &Env{
-		caller:   loopback.WithTenant(TenantID, abMod, icMod),
+		caller:   loopback.WithTenant(TenantID, abMod, icMod, wsMod),
 		broker:   broker,
 		ids:      ids,
 		ab:       abMod,
 		ic:       icMod,
+		ws:       wsMod,
 		db:       db,
 		holidays: holidaysCL2026(),
 		staff: []StaffOption{
@@ -172,6 +178,45 @@ func (e *Env) seed() {
 	e.seedEmployeeServiceConfig()
 	e.seedReservations()
 	e.seedCatalog()
+	e.seedWorkSchedule()
+}
+
+// seedWorkSchedule siembra las tablas staff/workcalendar que el módulo
+// work_schedule lee (esquema legacy texto, ownership externo — work_schedule
+// solo lee, nunca escribe). Es la fuente de la vista "Horario" del módulo
+// agenda. Ids enteros 1..3 en el MISMO orden que e.staff, para traducir el
+// StaffOption.ID (string) al staff de work_schedule (int64).
+func (e *Env) seedWorkSchedule() {
+	if len(e.staff) < 3 {
+		return
+	}
+	names := []string{e.staff[0].Name, e.staff[1].Name, e.staff[2].Name}
+	for i, name := range names {
+		sid := int64(i + 1)
+		e.db.Create(&workschedule.Staff{Id: sid, Name: name, Role: "Médico", Email: "doc" + Sprintf("%d", sid) + "@demo.cl"})
+		// Horario legado: igual que la plantilla appointment_booking de Natasha.
+		if i == 1 { // staff-natasha
+			for _, dow := range []int64{1, 2, 3, 4, 5} {
+				e.db.Create(&workschedule.WorkCalendar{Id: sid*10 + dow, StaffId: sid, DayOfWeek: dow, StartTime: "09:00", EndTime: "18:00", IsActive: true})
+			}
+		} else {
+			for _, dow := range []int64{1, 3, 5} {
+				e.db.Create(&workschedule.WorkCalendar{Id: sid*10 + dow, StaffId: sid, DayOfWeek: dow, StartTime: "08:00", EndTime: "14:00", IsActive: true})
+			}
+		}
+	}
+}
+
+// WorkScheduleStaffID traduce el StaffOption.ID (string) al staff de
+// work_schedule (int64) que get_work_schedule espera: la posición en la lista
+// de staff, 1-based. "" o desconocido → 0.
+func (e *Env) WorkScheduleStaffID(staffID string) int64 {
+	for i, so := range e.staff {
+		if so.ID == staffID {
+			return int64(i + 1)
+		}
+	}
+	return 0
 }
 
 func (e *Env) upsertCalendarConfigs() {

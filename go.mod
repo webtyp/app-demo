@@ -5,6 +5,7 @@ go 1.25.2
 require (
 	github.com/veltylabs/appointment_booking v0.0.0
 	github.com/veltylabs/item_catalog v0.0.0
+	github.com/veltylabs/work_schedule v0.0.0
 	webtyp.com/components v0.6.20
 	webtyp.com/css v0.4.21
 	webtyp.com/dom v0.13.12
@@ -47,3 +48,6 @@ replace github.com/veltylabs/appointment_booking => ../../veltylabs/modules/appo
 // item_catalog: solo se consume para los slugs canónicos de especialidad
 // (D6 del master) — la Etapa H lo monta como módulo demo completo.
 replace github.com/veltylabs/item_catalog => ../../veltylabs/modules/item_catalog
+
+// work_schedule: vista read-only "horario legado" (Etapa C2) — tag v0.1.4 local.
+replace github.com/veltylabs/work_schedule => ../../veltylabs/modules/work_schedule

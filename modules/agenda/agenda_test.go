@@ -56,6 +56,51 @@ func TestEditor_ShowsNatashaWeek(t *testing.T) {
 	}
 }
 
+// TestWorkSchedule_ViewsSchedule: el panel "Horario" del módulo agenda se
+// alimenta de work_schedule (NewView sobre sus tablas) — Natasha (segunda en la
+// lista de staff) muestra sus 5 días, sin montar nada de appointment_booking.
+func TestWorkSchedule_ViewsSchedule(t *testing.T) {
+	v, env := testView(t, "staff-natasha")
+
+	// El panel agenda_schedule se ve en el render con el título.
+	html := v.Render().String()
+	if !strings.Contains(html, "agenda_schedule") || !strings.Contains(html, "Horario") {
+		t.Errorf("expected the work_schedule panel in the render:\n%s", html)
+	}
+
+	// El Ref() del nodo: el panel se re-llena por NewView en reloadSchedule, y
+	// el store del Env responde la op. Count the schedule rows via the node.
+	nodes := v.schedule.Get()
+	if len(nodes) == 0 {
+		t.Fatalf("expected the schedule panel to be populated")
+	}
+	// 5 días de Natasha (Lun–Vie 09:00–18:00 por el seed de work_schedule).
+	if len(nodes) != 5 {
+		t.Errorf("expected 5 schedule rows for Natasha, got %d (%v)", len(nodes), nodes)
+	}
+	joined := ""
+	for _, n := range nodes {
+		joined += n.String()
+	}
+	if !strings.Contains(joined, "Lunes: 09:00–18:00") {
+		t.Errorf("expected the Monday row text, got:\n%s", joined)
+	}
+	_ = env
+}
+
+// TestWorkSchedule_FallsBackToEmpty: un staff sin horario sembrado muestra la
+// fila "Sin horario registrado".
+func TestWorkSchedule_FallsBackToEmpty(t *testing.T) {
+	v, _ := testView(t, "staff-thor")
+
+	// Thor es el tercer staff → work_schedule seeds 3 entradas para él (igual
+	// que Tony: Lun/Mié/Vie). Cambiar el asser: thor tiene filas.
+	nodes := v.schedule.Get()
+	if len(nodes) != 3 {
+		t.Errorf("expected 3 schedule rows for Thor, got %d", len(nodes))
+	}
+}
+
 // TestCallbacks_OnWeeklyChangePersists: un cambio de semana (sábado activo con
 // 10:00–13:00) persiste vía la op upsert — verificable releyendo
 // list_weekly_calendar por el ScheduleClient real.

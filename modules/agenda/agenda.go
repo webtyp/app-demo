@@ -17,6 +17,7 @@ import (
 	. "webtyp.com/html"
 
 	ab "github.com/veltylabs/appointment_booking"
+	workschedule "github.com/veltylabs/work_schedule"
 
 	"webtyp.com/app-demo/config"
 )
@@ -57,6 +58,10 @@ type scheduleView struct {
 	// cambiar de profesional o tras una escritura. Un SignalNodes permite
 	// swap de nodo sin reconstruir el árbol del chasis.
 	editor *SignalNodes
+	// schedule es el panel read-only del horario del profesional, alimentado
+	// por work_schedule (lee sus tablas staff/workcalendar) — re-lleno en
+	// cada cambio de staff.
+	schedule *SignalNodes
 }
 
 func (s *scheduleView) Init(_ Ctx) {
@@ -69,7 +74,30 @@ func (s *scheduleView) Init(_ Ctx) {
 	if s.editor == nil {
 		s.editor = NewNodes()
 	}
+	if s.schedule == nil {
+		s.schedule = NewNodes()
+	}
 	s.reloadEditor()
+	s.reloadSchedule()
+}
+
+// reloadSchedule re-llena el panel "Horario" del profesional elegido con las
+// filas de work_schedule.NewView (lista read-only sobre sus tablas).
+func (s *scheduleView) reloadSchedule() {
+	wsStaffID := s.env.WorkScheduleStaffID(s.sel.Get())
+	nodes := []*Element{}
+	if wsStaffID != 0 {
+		pres := workschedule.NewView(s.env.Caller(), wsStaffID)
+		if err := pres.Reload(); err == nil {
+			for _, it := range pres.Items() {
+				nodes = append(nodes, Li().Text(it.Label+": "+it.Description))
+			}
+		}
+	}
+	if len(nodes) == 0 {
+		nodes = append(nodes, Li().Text("Sin horario registrado"))
+	}
+	s.schedule.Set(nodes)
 }
 
 // selectedName devuelve el nombre del profesional seleccionado (linear scan
@@ -96,6 +124,7 @@ func (s *scheduleView) buildPicker() *Element {
 	sel.On("change", func(ev Event) {
 		s.sel.Set(ev.TargetValue())
 		s.reloadEditor()
+		s.reloadSchedule()
 	})
 	return sel
 }
@@ -199,7 +228,10 @@ func (s *scheduleView) Render() *Element {
 	return Div().Attr("class", "agenda").
 		Child(Div().Attr("class", "agenda__header").
 			Child(Span().Text("Profesional")).Child(s.buildPicker())).
-		Child(Div().Attr("class", "agenda__body").BindChildren(s.editor))
+		Child(Div().Attr("class", "agenda__body").BindChildren(s.editor)).
+		Child(Div().Attr("class", "agenda_schedule").
+			Child(H2().Text("Horario")).
+			Child(Ul().BindChildren(s.schedule)))
 }
 
 // ---------------------------------------------------------------------------
