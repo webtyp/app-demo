@@ -82,9 +82,9 @@ func main() {
 	p.Modules = []platformd.UIModule{
 		devices.New(p),
 		medicalhistory.New(p),
-		reservation.New(p, env),   // ← sobre appointment_booking real
-		agenda.New(p, env),        // ← editor de agenda sobre appointment_booking real
-		workschedule.New(p, env),  // ← work_schedule real, vista read-only sobre tablas legadas
+		reservation.New(p, env),                // ← sobre appointment_booking real
+		agenda.New(p, env),                     // ← editor de agenda sobre appointment_booking real
+		workschedule.New(p, env),               // ← work_schedule real, vista read-only sobre tablas legadas
 		itemcatalogdemo.NewCatalog(p, env),     // ← catálogo real, crudview sin config custom
 		itemcatalogdemo.NewSpecialties(p, env), // ← especialidades reales
 		about.New(),

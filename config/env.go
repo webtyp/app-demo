@@ -173,7 +173,7 @@ func (e *Env) Holidays2026() []string { return e.holidays }
 // excepciones están documentadas en cada método).
 func (e *Env) seed() {
 	e.upsertCalendarConfigs()
-	e.upsertWeekly()
+	e.upsertBlocks()
 	e.addExceptions()
 	e.seedEmployeeServiceConfig()
 	e.seedReservations()
@@ -231,7 +231,7 @@ func (e *Env) upsertCalendarConfigs() {
 	}
 }
 
-func (e *Env) upsertWeekly() {
+func (e *Env) upsertBlocks() {
 	call := func(op string, args model.Encodable) {
 		var doneErr error
 		e.caller.Call(op, args, nil, func(err error) { doneErr = err })

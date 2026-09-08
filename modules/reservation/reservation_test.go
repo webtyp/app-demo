@@ -8,6 +8,7 @@ import (
 
 	"webtyp.com/dom"
 	"webtyp.com/events"
+	tintime "webtyp.com/time"
 
 	ab "github.com/veltylabs/appointment_booking"
 
@@ -20,6 +21,7 @@ func (emptyCtx) OnCleanup(func()) {}
 
 func testEnv(t *testing.T) *config.Env {
 	t.Helper()
+	tintime.SetTimeZoneOffset(-3)
 	return config.New()
 }
 

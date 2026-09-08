@@ -151,12 +151,9 @@ func TestExceptionRoundTrip(t *testing.T) {
 	})
 }
 
-// Las siete filas llevan los siete nombres de día, en orden. El bug que esto
-// reemplaza: fallbackWeek dejaba el día en cero en los días no configurados y
-// cuatro filas renderizaban "Domingo" — y guardar una de ellas escribía Domingo.
-// Se cuentan los spans de día (.scheduleeditor__day-name), no el HTML completo,
-// porque el calendario de excepciones también pinta nombres de día.
-func TestEditor_RendersSevenDistinctDays(t *testing.T) {
+// TestEditor_RendersPatternBlocks verifica que el editor de patrones
+// renderiza las secciones de patrón con las horas del bloque sembrado.
+func TestEditor_RendersPatternBlocks(t *testing.T) {
 	v, _ := testView(t, "staff-tony") // sembrado Lun/Mié/Vie solo — 1 bloque
 	html := v.buildEditor().Render().String()
 
@@ -167,7 +164,8 @@ func TestEditor_RendersSevenDistinctDays(t *testing.T) {
 	}
 }
 
-// blocksToPattern agrupa bloques por rango de horario.
+// TestBlocksToPattern_GroupsByTimeRange agrupa bloques por rango de horario e
+// índice de días exacto.
 func TestBlocksToPattern_GroupsByTimeRange(t *testing.T) {
 	pattern := blocksToPattern([]ab.WorkCalendarBlock{
 		{DayOfWeek: 1, IsActive: true, StartMin: 480, EndMin: 840},
@@ -180,5 +178,35 @@ func TestBlocksToPattern_GroupsByTimeRange(t *testing.T) {
 	}
 	if len(pattern[0].Days) != 3 {
 		t.Fatalf("days length = %d, want 3", len(pattern[0].Days))
+	}
+	wantDays := []int{1, 3, 5}
+	for i, d := range pattern[0].Days {
+		if d != wantDays[i] {
+			t.Errorf("day[%d] = %d, want %d", i, d, wantDays[i])
+		}
+	}
+}
+
+// TestSaveDayBlocks_PersistsDayOfWeek verifica que guardar un día específico
+// (p. ej. Martes = 2) persiste los bloques exactamente para el DayOfWeek 2
+// (guardia contra "activar martes, guardar domingo").
+func TestSaveDayBlocks_PersistsDayOfWeek(t *testing.T) {
+	v, env := testView(t, "staff-thor")
+	editor := v.buildEditor()
+
+	// Guardar bloque sólo para el martes (dayOfWeek = 2).
+	editor.OnPatternChange([]scheduleeditor.PatternRow{
+		{StartMin: 540, EndMin: 720, Days: []int{2}},
+	})
+
+	blocks := listBlocks(t, env, "staff-thor")
+	if len(blocks) != 1 {
+		t.Fatalf("expected 1 block for Thor after pattern change, got %d", len(blocks))
+	}
+	if blocks[0].DayOfWeek != 2 {
+		t.Errorf("DayOfWeek = %d, want 2 (Tuesday)", blocks[0].DayOfWeek)
+	}
+	if blocks[0].StartMin != 540 || blocks[0].EndMin != 720 {
+		t.Errorf("unexpected block bounds: %d-%d", blocks[0].StartMin, blocks[0].EndMin)
 	}
 }

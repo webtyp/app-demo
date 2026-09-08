@@ -2,9 +2,8 @@
 PLAN: "chore(demo): drop every local replace, all deps to latest published versions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: review
+STATUS: running
 SESSION: 11756890902070943952
-PR: https://github.com/webtyp/app-demo/pull/3
 ---
 
 # PLAN — registro de ejecución para `app-demo`

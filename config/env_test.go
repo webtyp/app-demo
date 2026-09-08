@@ -35,9 +35,10 @@ func TestNew_DoesNotPanic(t *testing.T) {
 	}
 }
 
-// TestWeekly_SeededForNatasha: list_blocks devuelve los 10 bloques de Natasha
-// (2 bloques x 5 días) que el seed sembró vía las ops reales.
-func TestWeekly_SeededForNatasha(t *testing.T) {
+// TestSeededBlocks_ForNatasha: list_blocks devuelve los 10 bloques de Natasha
+// (2 bloques x 5 días con brecha de colación 13:00-14:00, 540-780 / 840-1080)
+// que el seed sembró vía las ops reales.
+func TestSeededBlocks_ForNatasha(t *testing.T) {
 	env := New()
 	client := ab.NewScheduleClient(env.Caller(), env.TenantID(), "staff-natasha")
 
@@ -56,12 +57,15 @@ func TestWeekly_SeededForNatasha(t *testing.T) {
 			t.Errorf("unexpected block: DayOfWeek=%d active=%v %d-%d",
 				r.DayOfWeek, r.IsActive, r.StartMin, r.EndMin)
 		}
+		if (r.StartMin != 540 || r.EndMin != 780) && (r.StartMin != 840 || r.EndMin != 1080) {
+			t.Errorf("block time range out of bounds: %d-%d", r.StartMin, r.EndMin)
+		}
 	}
 }
 
-// TestWeekly_TonyAndThor: Tony tiene 3 filas (Lun/Mié/Vie); Thor ninguna
+// TestSeededBlocks_TonyAndThor: Tony tiene 3 filas (Lun/Mié/Vie); Thor ninguna
 // (agenda recién creada).
-func TestWeekly_TonyAndThor(t *testing.T) {
+func TestSeededBlocks_TonyAndThor(t *testing.T) {
 	env := New()
 
 	tony := ab.NewScheduleClient(env.Caller(), env.TenantID(), "staff-tony")

@@ -145,6 +145,8 @@ func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 		Exceptions: toEditorExceptions(excs),
 		Holidays:   s.env.Holidays2026(),
 		OnPatternChange: func(rows []scheduleeditor.PatternRow) {
+			var firstErr error
+			pending := 7
 			for dow := 0; dow <= 6; dow++ {
 				var dayBlocks []ab.WorkCalendarBlock
 				for _, r := range rows {
@@ -162,9 +164,15 @@ func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 					}
 				}
 				client.SaveDayBlocks(dow, dayBlocks, func(err error) {
-					s.notifySave(err)
-					if err == nil {
-						s.reloadEditor()
+					if err != nil && firstErr == nil {
+						firstErr = err
+					}
+					pending--
+					if pending == 0 {
+						s.notifySave(firstErr)
+						if firstErr == nil {
+							s.reloadEditor()
+						}
 					}
 				})
 			}
@@ -255,7 +263,6 @@ func (s *ScheduleView) Render() *Element {
 // Conversiones scheduleeditor ↔ appointment_booking (forma local, DRY en config
 // si la Etapa F las repite).
 // ---------------------------------------------------------------------------
-
 
 func toWCException(x scheduleeditor.Exception) ab.WorkCalendarException {
 	return ab.WorkCalendarException{

@@ -96,7 +96,7 @@ func (s *ScheduleList) reload() {
 		pres := ws.NewView(s.env.Caller(), wsStaffID)
 		if err := pres.Reload(); err == nil {
 			for _, it := range pres.Items() {
-				nodes = append(nodes, Li().Text(it.Label + ": " + it.Description))
+				nodes = append(nodes, Li().Text(it.Label+": "+it.Description))
 			}
 		}
 	}
