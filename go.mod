@@ -8,7 +8,7 @@ require (
 	webtyp.com/components v0.6.17
 	webtyp.com/css v0.4.21
 	webtyp.com/dom v0.13.10
-	webtyp.com/events v0.0.3
+	webtyp.com/events v0.0.4
 	webtyp.com/fmt v1.0.0
 	webtyp.com/html v0.0.21
 	webtyp.com/input v0.0.6
