@@ -154,7 +154,45 @@ func TestCreate_GoesThroughRealOp(t *testing.T) {
 	}
 }
 
-// TestCreate_SlotTaken: crear sobre un slot ocupado no crea una duplicada.
+// TestFreeSlots_DerivedFromAvailability: un día laboral de Natasha (con res-1 y
+// res-2 ocupando 09:00 y 10:30) excluye esos huecos y respeta la colación
+// 13:00–14:00.
+func TestFreeSlots_DerivedFromAvailability(t *testing.T) {
+	env := testEnv(t)
+	store := &reservationStore{env: env, staff: dom.NewString("staff-natasha"), staffId: "staff-natasha"}
+
+	slots := store.freeSlotsForDay("2026-09-10") // jueves — Natasha agenda
+	if len(slots) == 0 {
+		t.Fatal("expected free slots for Natasha on a working Thursday")
+	}
+
+	found := map[string]bool{}
+	for _, s := range slots {
+		found[s] = true
+	}
+	// Los slots 09:00 y 10:30 están reservados (res-1, res-2) — no aparecen.
+	if found["09:00"] {
+		t.Error("09:00 is reserved (res-1); must not be a free slot")
+	}
+	if found["10:30"] {
+		t.Error("10:30 is reserved (res-2); must not be a free slot")
+	}
+	// Un hueco libre posterior a la colación sí aparece (13:00–14:00 quita 13:00
+	// y 13:30 del rango).
+	if !found["14:00"] {
+		t.Errorf("14:00 must be free after the lunch break; got %v", slots)
+	}
+}
+
+// TestFreeSlots_NoStaffOrDay_Empty: sin médico o sin día no hay huecos.
+func TestFreeSlots_NoStaffOrDay_Empty(t *testing.T) {
+	env := testEnv(t)
+	store := &reservationStore{env: env, staff: dom.NewString("")}
+
+	if got := store.freeSlotsForDay(""); got != nil || len(got) != 0 {
+		t.Fatalf("no staff/day must yield empty slots, got %v", got)
+	}
+}
 func TestCreate_SlotTaken(t *testing.T) {
 	env := testEnv(t)
 	store := &reservationStore{env: env, staff: dom.NewString("staff-natasha"), staffId: "staff-natasha"}

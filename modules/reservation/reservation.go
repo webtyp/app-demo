@@ -372,6 +372,49 @@ func unixDay(dateStr string) int64 {
 	return nano / 1000000000
 }
 
+// freeSlotsForDay consulta list_availability para el médico scopeado en el día
+// dado y devuelve los huecos como "HH:MM" en hora local. El arg config_id es el
+// id del employee_service_config (no del work_calendar_config) — service.go:
+// ListAvailability hace GetEmployeeServiceConfig(configId). Sin médico o sin
+// servicio, devuelve nil.
+func (s *reservationStore) freeSlotsForDay(day string) []string {
+	if s.staffId == "" || day == "" {
+		return nil
+	}
+	escID := s.env.ESCForStaff(s.staffId)
+	if escID == "" {
+		return nil
+	}
+	out := &ab.TimeSlotList{}
+	var callErr error
+	s.env.Caller().Call(
+		ab.OpListAvailability,
+		&ab.ListAvailabilityArgs{
+			TenantId: s.env.TenantID(),
+			StaffId:  s.staffId,
+			ConfigId: escID,
+			From:     unixDay(day),
+			To:       unixDay(day),
+		},
+		out,
+		func(err error) { callErr = err },
+	)
+	if callErr != nil {
+		return nil
+	}
+	slots := make([]string, 0, out.Len())
+	for i := 0; i < out.Len(); i++ {
+		slot := out.At(i).(*ab.TimeSlot)
+		// FormatTime espera UnixNano; la hora local del inicio del hueco.
+		hhmm := tintime.FormatTime(slot.StartUtc * 1000000000)
+		if len(hhmm) >= 5 {
+			hhmm = hhmm[:5]
+		}
+		slots = append(slots, hhmm)
+	}
+	return slots
+}
+
 // byDay adapta el Presenter: el filtro (term = "YYYY-MM-DD" del calendario)
 // filtra la lista ya cargada por fecha.
 type byDay struct {

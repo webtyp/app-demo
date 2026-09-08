@@ -266,7 +266,10 @@ func (e *Env) seedEmployeeServiceConfig() {
 // seedReservations siembra reservas CONFIRMED directo con db.Create. La op
 // create_reservation valida el slot contra list_availability, lo que hace un
 // seed por la op frágil; directo es la forma honesta de sembrar datos
-// históricos. Los días caen en la plantilla de Natasha (Lun–Vie).
+// históricos. Los días caen en la plantilla de Natasha (Lun–Vie) y
+// ReservationTime es la hora LOCAL ("HH:MM") convertida a UTC con la zona del
+// work_calendar_config de Natasha — igual que hace list_availability, para que
+// el motor de disponibilidad realmente las excluya de los huecos libres.
 func (e *Env) seedReservations() {
 	seeds := []*ab.Reservation{
 		{
@@ -274,7 +277,7 @@ func (e *Env) seedReservations() {
 			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
 			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
 			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
-			ReservationDate: unixDay("2026-09-10"), ReservationTime: unixDay("2026-09-10") + 9*3600,
+			ReservationDate: unixDay("2026-09-10"), ReservationTime: localToUTC(e, "2026-09-10", "09:00"),
 			LocalStringDate: "2026-09-10", LocalStringTime: "09:00",
 			Notes: "María Gonzalez", UpdatedAt: unixDay("2026-09-09") * 1000000000,
 		},
@@ -283,7 +286,7 @@ func (e *Env) seedReservations() {
 			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
 			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
 			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
-			ReservationDate: unixDay("2026-09-10"), ReservationTime: unixDay("2026-09-10") + 10*3600 + 30*60,
+			ReservationDate: unixDay("2026-09-10"), ReservationTime: localToUTC(e, "2026-09-10", "10:30"),
 			LocalStringDate: "2026-09-10", LocalStringTime: "10:30",
 			Notes: "Juan Pérez", UpdatedAt: unixDay("2026-09-09") * 1000000000,
 		},
@@ -292,7 +295,7 @@ func (e *Env) seedReservations() {
 			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
 			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
 			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
-			ReservationDate: unixDay("2026-09-11"), ReservationTime: unixDay("2026-09-11") + 9*3600,
+			ReservationDate: unixDay("2026-09-11"), ReservationTime: localToUTC(e, "2026-09-11", "09:00"),
 			LocalStringDate: "2026-09-11", LocalStringTime: "09:00",
 			Notes: "Ana Silva", UpdatedAt: unixDay("2026-09-10") * 1000000000,
 		},
@@ -300,6 +303,19 @@ func (e *Env) seedReservations() {
 	for _, r := range seeds {
 		e.db.Create(r)
 	}
+}
+
+// localToUTC convierte "YYYY-MM-DD" + "HH:MM" (hora local Santiago) al epoch
+// UTC en segundos — la misma conversión que list_availability usa para alinear
+// los slots con las reservas. La demo usa America/Santiago (ver upsertCalendarConfigs).
+func localToUTC(e *Env, dateStr, hhmm string) int64 {
+	// ParseTime devuelve minutos desde medianoche (int16). Se usa webtyp/time,
+	// no stdlib strconv.
+	minOfDay, err := tinytime.ParseTime(hhmm)
+	if err != nil {
+		return 0
+	}
+	return ab.LocalIntToUnixUTC(unixDay(dateStr), int(minOfDay), "America/Santiago")
 }
 
 // seedCatalog siembra especialidades + ítems de servicio en el item_catalog
