@@ -29,6 +29,13 @@ is the canonical CRUD case — **copy it to make a new module**, rename the type
 swap the model. That symmetry is the lesson; do not let a module drift into its
 own shape.
 
+> **Two patterns coexist here.** `devices/`, `medicalhistory/` and `reservation/`
+> keep the local four-file pattern (their records are demo-local, there is no
+> `veltylabs` module owning them). The real-domain modules (`agenda/`,
+> `itemcatalog/`) use the wrapper below. Don't "unify" them: a module with a real
+> `veltylabs/modules/*` backend must consume the real module, never re-declare a
+> local store for it.
+
 ### The other module shape: a thin wrapper over a real domain module
 
 A module whose data and persistence live in a `veltylabs/modules/*` repo (not a
@@ -37,16 +44,16 @@ because the domain logic, the ops and the records are the module's. Its files:
 
 | File | One responsibility |
 |---|---|
-| `<module>.go` | `New(p, env)`, `View()` building a component that talks to `demoenv.Caller()` via the real module's caller-side client (e.g. `appointment_booking.NewScheduleClient`) |
+| `<module>.go` | `New(p, env)`, `View()` building a component that talks to `config.Caller()` via the real module's caller-side client (e.g. `appointment_booking.NewScheduleClient`) |
 | `svg.go` | the nav glyph |
 
 `modules/agenda/` is the worked example: it renders `components/scheduleeditor`
 and adapts its callbacks to `appointment_booking`'s `ScheduleClient`, reading
 the weekly template + exceptions in `Init`, persisting on each callback, and
 re-mounting the editor subtree with fresh data (the `ScheduleEditor` is not the
-source of truth). The shared composition root is `demoenv` (see README): the
-in-memory `orm.DB`, the `router/loopback` caller, the `events/mock` broker and
-the seed — never duplicated per module.
+source of truth). The shared composition root is `config` (see README): the
+in-memory `orm.DB`, the `router/loopback` caller, the `events/mock` broker, the
+seed and the Spanish dictionary — never duplicated per module.
 
 **If a file blows past its ceiling, stop.** A long `store.go` full of adapter
 boilerplate is not "just how it is" — it means a piece of wiring that every
