@@ -22,7 +22,7 @@ require (
 	webtyp.com/time v0.5.5
 	webtyp.com/unixid v0.2.28
 	webtyp.com/view v0.5.2
-	webtyp.com/widget v0.6.24
+	webtyp.com/widget v0.6.25
 )
 
 require (
@@ -48,7 +48,6 @@ replace webtyp.com/components => ../components
 
 // widget's Form-holds-Open widening, consumed transitively by the local
 // components. Drop once widget publishes the tag.
-replace webtyp.com/widget => ../widget
 
 // Local replace for unreleased work: widget/style's ControlBox now emits
 // --control-width, which lives in the local css catalog. Drop once css publishes.
