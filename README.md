@@ -16,6 +16,7 @@ in a running app.
 - `modules/reservation` — reservation over the REAL `appointment_booking` module: `calendarslider` filter + `targethour` list, `area/doctor` Context selects, and `schedule.changed` sync (Etapa F/G).
 - `modules/agenda` — schedule editor over the REAL `appointment_booking` module (`ScheduleClient` + `ScheduleEditor`): weekly template + per-date exceptions, via `loopback.New` (Etapa D).
 - `modules/itemcatalog` — TWO modules over the REAL `item_catalog`: "Catálogo" (`NewView`) and "Especialidades" (`NewSpecialtyView`), both mounted on `crudview.New(Config{})` with NO custom config — proof the layout is reused as-is (Etapa H).
+- `modules/agenda` also consumes the REAL `work_schedule`: its "Horario" read-only panel is `work_schedule.NewView` over the module's own tables (Etapa C2).
 - `modules/about` — static module.
 - `web/client.go` — the composition root: `platformd.Platform` + `hiddenModule`
   (exercises `CanView`), mock brand/identity, `themetoggle` user action, and
