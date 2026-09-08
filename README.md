@@ -37,16 +37,7 @@ the theme, `config/css.go`).
 
 ## Releases
 
-The real modules are pinned by version and pointed at the local working tree
-while they are in development (same pattern as `webtyp.com/components`):
-
-```
-replace github.com/veltylabs/appointment_booking => ../../veltylabs/modules/appointment_booking
-replace github.com/veltylabs/item_catalog       => ../../veltylabs/modules/item_catalog
-```
-
-Drop each `replace` once the repo publishes the needed tag (a `go.mod` clean
-of `replace`s means every dependency is released).
+All dependencies (including `webtyp.com/*` framework packages and `github.com/veltylabs/*` domain modules) resolve entirely from their published tags. `go.mod` contains no local `replace` directives.
 
 ## Translations
 
@@ -84,14 +75,3 @@ documenta para su picker de paciente — deuda visible, no oculta.
 ## Run
 
     webtyp            # from this repo; dev server :8080, MCP :6060
-
-## Layout dependency
-
-The demo consumes the shell via a local replace while layout is in monorepo
-development:
-
-    replace webtyp.com/layout => ../layout
-
-With no replace, resolution falls back to the published `webtyp.com/layout`
-module. (A clone outside this workspace needs either the published version or
-the `../layout` checkout next to it.)

@@ -173,7 +173,7 @@ func (e *Env) Holidays2026() []string { return e.holidays }
 // excepciones están documentadas en cada método).
 func (e *Env) seed() {
 	e.upsertCalendarConfigs()
-	e.upsertWeekly()
+	e.upsertBlocks()
 	e.addExceptions()
 	e.seedEmployeeServiceConfig()
 	e.seedReservations()
@@ -231,7 +231,7 @@ func (e *Env) upsertCalendarConfigs() {
 	}
 }
 
-func (e *Env) upsertWeekly() {
+func (e *Env) upsertBlocks() {
 	call := func(op string, args model.Encodable) {
 		var doneErr error
 		e.caller.Call(op, args, nil, func(err error) { doneErr = err })
@@ -239,18 +239,23 @@ func (e *Env) upsertWeekly() {
 			panic(doneErr)
 		}
 	}
-	// Natasha: Lun–Vie 09:00–18:00 con colación 13:00–14:00.
+	// Natasha: Lun–Vie 09:00–18:00 con colación 13:00–14:00 (bloque 1: 09:00–13:00, bloque 2: 14:00–18:00).
 	for dow := int64(1); dow <= 5; dow++ {
-		call(ab.OpUpsertWeeklyCalendar, &ab.UpsertWeeklyCalendarArgs{
+		call(ab.OpSaveDayBlocks, &ab.SaveDayBlocksArgs{
 			TenantId: TenantID, StaffId: "staff-natasha", DayOfWeek: dow,
-			WorkStart: 540, WorkFinish: 1080, BreakStart: 780, BreakFinish: 840, IsActive: true,
+			Blocks: []ab.WorkCalendarBlock{
+				{TenantId: TenantID, StaffId: "staff-natasha", DayOfWeek: dow, StartMin: 540, EndMin: 780, IsActive: true},
+				{TenantId: TenantID, StaffId: "staff-natasha", DayOfWeek: dow, StartMin: 840, EndMin: 1080, IsActive: true},
+			},
 		})
 	}
 	// Tony: Lun/Mié/Vie 08:00–14:00 sin colación.
 	for _, dow := range []int64{1, 3, 5} {
-		call(ab.OpUpsertWeeklyCalendar, &ab.UpsertWeeklyCalendarArgs{
+		call(ab.OpSaveDayBlocks, &ab.SaveDayBlocksArgs{
 			TenantId: TenantID, StaffId: "staff-tony", DayOfWeek: dow,
-			WorkStart: 480, WorkFinish: 840, BreakStart: 0, BreakFinish: 0, IsActive: true,
+			Blocks: []ab.WorkCalendarBlock{
+				{TenantId: TenantID, StaffId: "staff-tony", DayOfWeek: dow, StartMin: 480, EndMin: 840, IsActive: true},
+			},
 		})
 	}
 	// Thor: sin filas — agenda "recién creada".

@@ -35,62 +35,61 @@ func TestNew_DoesNotPanic(t *testing.T) {
 	}
 }
 
-// TestWeekly_SeededForNatasha: list_weekly_calendar devuelve las 5 filas de
-// Natasha que el seed sembró vía las ops reales.
-func TestWeekly_SeededForNatasha(t *testing.T) {
+// TestSeededBlocks_ForNatasha: list_blocks devuelve los 10 bloques de Natasha
+// (2 bloques x 5 días con brecha de colación 13:00-14:00, 540-780 / 840-1080)
+// que el seed sembró vía las ops reales.
+func TestSeededBlocks_ForNatasha(t *testing.T) {
 	env := New()
 	client := ab.NewScheduleClient(env.Caller(), env.TenantID(), "staff-natasha")
 
-	var rows []ab.WorkCalendarWeekly
-	client.Weekly(func(r []ab.WorkCalendarWeekly, err error) {
+	var rows []ab.WorkCalendarBlock
+	client.Blocks(func(r []ab.WorkCalendarBlock, err error) {
 		if err != nil {
-			t.Fatalf("Weekly: %v", err)
+			t.Fatalf("Blocks: %v", err)
 		}
 		rows = r
 	})
-	if len(rows) != 5 {
-		t.Fatalf("expected 5 weekly rows for Natasha, got %d", len(rows))
+	if len(rows) != 10 {
+		t.Fatalf("expected 10 blocks for Natasha, got %d", len(rows))
 	}
 	for _, r := range rows {
-		if !r.IsActive || r.WorkStart != 540 || r.WorkFinish != 1080 {
-			t.Errorf("unexpected row: DayOfWeek=%d active=%v %d-%d",
-				r.DayOfWeek, r.IsActive, r.WorkStart, r.WorkFinish)
+		if !r.IsActive {
+			t.Errorf("unexpected block: DayOfWeek=%d active=%v %d-%d",
+				r.DayOfWeek, r.IsActive, r.StartMin, r.EndMin)
+		}
+		if (r.StartMin != 540 || r.EndMin != 780) && (r.StartMin != 840 || r.EndMin != 1080) {
+			t.Errorf("block time range out of bounds: %d-%d", r.StartMin, r.EndMin)
 		}
 	}
 }
 
-// TestWeekly_TonyAndThor: Tony tiene 3 filas (Lun/Mié/Vie) sin colación; Thor
-// ninguna (agenda recién creada).
-func TestWeekly_TonyAndThor(t *testing.T) {
+// TestSeededBlocks_TonyAndThor: Tony tiene 3 filas (Lun/Mié/Vie); Thor ninguna
+// (agenda recién creada).
+func TestSeededBlocks_TonyAndThor(t *testing.T) {
 	env := New()
 
 	tony := ab.NewScheduleClient(env.Caller(), env.TenantID(), "staff-tony")
-	var tRows []ab.WorkCalendarWeekly
-	tony.Weekly(func(r []ab.WorkCalendarWeekly, err error) {
+	var tRows []ab.WorkCalendarBlock
+	tony.Blocks(func(r []ab.WorkCalendarBlock, err error) {
 		if err != nil {
-			t.Fatalf("weekly tony: %v", err)
+			t.Fatalf("blocks tony: %v", err)
 		}
 		tRows = r
 	})
 	if len(tRows) != 3 {
-		t.Fatalf("expected 3 weekly rows for Tony, got %d", len(tRows))
-	}
-	for _, r := range tRows {
-		if r.BreakStart != 0 || r.BreakFinish != 0 {
-			t.Errorf("Tony must have no break: %+v", r)
-		}
+		t.Fatalf("expected 3 blocks for Tony, got %d", len(tRows))
 	}
 
 	thor := ab.NewScheduleClient(env.Caller(), env.TenantID(), "staff-thor")
-	var hRows []ab.WorkCalendarWeekly
-	thor.Weekly(func(r []ab.WorkCalendarWeekly, err error) {
+	var hRows []ab.WorkCalendarBlock
+	thor.Blocks(func(r []ab.WorkCalendarBlock, err error) {
 		if err != nil {
-			t.Fatalf("weekly thor: %v", err)
+			t.Fatalf("blocks thor: %v", err)
 		}
 		hRows = r
 	})
 	if len(hRows) != 0 {
-		t.Fatalf("expected no weekly rows for Thor, got %d", len(hRows))
+		t.Fatalf("expected no blocks for Thor, got %d", len(hRows))
 	}
 }
 

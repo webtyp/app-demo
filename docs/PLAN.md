@@ -2,8 +2,9 @@
 PLAN: "chore(demo): drop every local replace, all deps to latest published versions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11756890902070943952
+PR: https://github.com/webtyp/app-demo/pull/3
 ---
 
 # PLAN — registro de ejecución para `app-demo`
@@ -33,7 +34,7 @@ SESSION: 11756890902070943952
 | 6 | Fixes de la vista `#agenda` | [PLAN_AGENDA_VIEW.md](PLAN_AGENDA_VIEW.md) | ✅ hecho completo (`6490daf` + residual §10) |
 | 7 | Backend real: `routes/`, HTTP y SSE, todo en memoria | [PLAN_REAL_BACKEND.md](PLAN_REAL_BACKEND.md) | ⬜ pendiente — bloqueado por `events.Fanout` |
 | 8 | Dominio de agenda (bloques, días marcados, feriados, conflictos) | [PLAN_AGENDA_DOMAIN.md](PLAN_AGENDA_DOMAIN.md) | ⬜ pendiente — bloqueado por 4 gates + etapa 7 |
-| Deps | Quitar los 4 `replace` locales; todo dep a su última versión publicada | [PLAN_DROP_LOCAL_REPLACES.md](PLAN_DROP_LOCAL_REPLACES.md) | 🔵 despachado (codejob) — desbloquea `events.Fanout` (v0.0.5) para la etapa 7 |
+| Deps | Quitar los 4 `replace` locales; todo dep a su última versión publicada | [PLAN_DROP_LOCAL_REPLACES.md](PLAN_DROP_LOCAL_REPLACES.md) | ✅ hecho (sin replaces locales, todo dep a su versión publicada) |
 
 > **Etapa 6 (2026-09-08) — ✅ EJECUTADA COMPLETA.** Manejando `#agenda` en la
 > demo corriendo aparecieron una corrupción de datos al guardar (activar el
@@ -47,10 +48,7 @@ SESSION: 11756890902070943952
 >
 > Los 3 residuales de §10 (`style.Center()` en `PartDay`/`PartHeader`, "sin
 > colación" mostrado como 06:00, `modules/workschedule` sin chrome) se
-> corrigieron directo en fuente el mismo día y se verificaron en vivo vía
-> `replace` local a `../components`/`../widget` en `go.mod` (mismo patrón que
-> `icons`) — pendiente quitar esas dos líneas cuando esos repos publiquen la
-> corrección. `gotest` verde en `components`, `widget` y `app-demo`.
+> corrigieron directo en fuente el mismo día. `gotest` verde en `components`, `widget` y `app-demo`.
 
 > **Etapa 7 (2026-09-08) — ⬜ PENDIENTE.** Hoy la demo corre **entera en WASM**
 > con `router/loopback` y sin backend: el daemon lo dice en cada arranque
