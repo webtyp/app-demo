@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/veltylabs/appointment_booking v0.0.0
 	github.com/veltylabs/item_catalog v0.0.0
-	webtyp.com/components v0.6.17
+	webtyp.com/components v0.6.18
 	webtyp.com/css v0.4.21
 	webtyp.com/dom v0.13.10
 	webtyp.com/events v0.0.4
