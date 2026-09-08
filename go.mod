@@ -15,7 +15,7 @@ require (
 	webtyp.com/layout v0.2.20
 	webtyp.com/model v0.1.8
 	webtyp.com/orm v0.12.1
-	webtyp.com/router v0.1.35
+	webtyp.com/router v0.1.36
 	webtyp.com/storage v0.0.7
 	webtyp.com/svg v0.3.5
 	webtyp.com/time v0.5.5
@@ -39,6 +39,9 @@ require (
 // repo is published past the change.
 
 replace webtyp.com/icons => ../icons
+
+// El loopback responde "{}" para ops sin args (fix del arnés) — sirve el
+// working tree de router hasta publicarlo; luego se quita este replace.
 
 // Los módulos de veltylabs aún no publican los changes de la Etapa C — sirve
 // el working tree local (mismo patrón que webtyp.com/components => ../components).
