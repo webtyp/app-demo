@@ -41,16 +41,6 @@ require (
 
 replace webtyp.com/icons => ../icons
 
-// Local replace for unreleased work: components carries the new
-// scheduleeditor OnWeeklyChange signature and the RevealedBy(widget.Open)
-// reveal (the AGENDA_VIEW_FIXES gates). Drop once components publishes the tag.
-
-// widget's Form-holds-Open widening, consumed transitively by the local
-// components. Drop once widget publishes the tag.
-
-// Local replace for unreleased work: widget/style's ControlBox now emits
-// --control-width, which lives in the local css catalog. Drop once css publishes.
-
 // Los módulos de veltylabs aún no publican los changes de la Etapa C — sirve
 // el working tree local (mismo patrón que webtyp.com/components => ../components).
 replace github.com/veltylabs/appointment_booking => ../../veltylabs/modules/appointment_booking

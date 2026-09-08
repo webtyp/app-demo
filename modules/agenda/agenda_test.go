@@ -19,10 +19,10 @@ type emptyCtx struct{}
 
 func (emptyCtx) OnCleanup(func()) {}
 
-func testView(t *testing.T, staffId string) (*scheduleView, *config.Env) {
+func testView(t *testing.T, staffId string) (*ScheduleView, *config.Env) {
 	t.Helper()
 	env := config.New()
-	v := &scheduleView{p: nil, env: env, sel: dom.NewString(staffId)}
+	v := &ScheduleView{p: nil, env: env, sel: dom.NewString(staffId)}
 	v.Init(&emptyCtx{})
 	return v, env
 }
@@ -56,51 +56,6 @@ func TestEditor_ShowsNatashaWeek(t *testing.T) {
 	}
 }
 
-// TestWorkSchedule_ViewsSchedule: el panel "Horario" del módulo agenda se
-// alimenta de work_schedule (NewView sobre sus tablas) — Natasha (segunda en la
-// lista de staff) muestra sus 5 días, sin montar nada de appointment_booking.
-func TestWorkSchedule_ViewsSchedule(t *testing.T) {
-	v, env := testView(t, "staff-natasha")
-
-	// El panel agenda_schedule se ve en el render con el título.
-	html := v.Render().String()
-	if !strings.Contains(html, "agenda_schedule") || !strings.Contains(html, "Horario") {
-		t.Errorf("expected the work_schedule panel in the render:\n%s", html)
-	}
-
-	// El Ref() del nodo: el panel se re-llena por NewView en reloadSchedule, y
-	// el store del Env responde la op. Count the schedule rows via the node.
-	nodes := v.schedule.Get()
-	if len(nodes) == 0 {
-		t.Fatalf("expected the schedule panel to be populated")
-	}
-	// 5 días de Natasha (Lun–Vie 09:00–18:00 por el seed de work_schedule).
-	if len(nodes) != 5 {
-		t.Errorf("expected 5 schedule rows for Natasha, got %d (%v)", len(nodes), nodes)
-	}
-	joined := ""
-	for _, n := range nodes {
-		joined += n.String()
-	}
-	if !strings.Contains(joined, "Lunes: 09:00–18:00") {
-		t.Errorf("expected the Monday row text, got:\n%s", joined)
-	}
-	_ = env
-}
-
-// TestWorkSchedule_FallsBackToEmpty: un staff sin horario sembrado muestra la
-// fila "Sin horario registrado".
-func TestWorkSchedule_FallsBackToEmpty(t *testing.T) {
-	v, _ := testView(t, "staff-thor")
-
-	// Thor es el tercer staff → work_schedule seeds 3 entradas para él (igual
-	// que Tony: Lun/Mié/Vie). Cambiar el asser: thor tiene filas.
-	nodes := v.schedule.Get()
-	if len(nodes) != 3 {
-		t.Errorf("expected 3 schedule rows for Thor, got %d", len(nodes))
-	}
-}
-
 // TestCallbacks_OnWeeklyChangePersists: un cambio de semana (sábado activo con
 // 10:00–13:00) persiste vía la op upsert — verificable releyendo
 // list_weekly_calendar por el ScheduleClient real.
@@ -113,8 +68,7 @@ func TestCallbacks_OnWeeklyChangePersists(t *testing.T) {
 	if editor.OnWeeklyChange == nil {
 		t.Fatal("expected the editor to carry OnWeeklyChange")
 	}
-	editor.OnWeeklyChange(scheduleeditor.WeeklyRow{
-		DayOfWeek:  6,
+	editor.OnWeeklyChange(6, scheduleeditor.WeeklyRow{
 		Active:     true,
 		WorkStart:  600,
 		WorkFinish: 780,
@@ -199,4 +153,49 @@ func TestExceptionRoundTrip(t *testing.T) {
 			t.Fatalf("expected no exceptions after remove, got %d", len(rows))
 		}
 	})
+}
+
+// Las siete filas llevan los siete nombres de día, en orden. El bug que esto
+// reemplaza: fallbackWeek dejaba el día en cero en los días no configurados y
+// cuatro filas renderizaban "Domingo" — y guardar una de ellas escribía Domingo.
+// Se cuentan los spans de día (.scheduleeditor__day-name), no el HTML completo,
+// porque el calendario de excepciones también pinta nombres de día.
+func TestEditor_RendersSevenDistinctDays(t *testing.T) {
+	v, _ := testView(t, "staff-tony") // sembrado Lun/Mié/Vie solo — 4 filas sin llenar
+	html := v.buildEditor().Render().String()
+
+	for _, day := range []string{"Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"} {
+		if got := strings.Count(html, "scheduleeditor__day-name'>"+day+"</span>"); got != 1 {
+			t.Errorf("day %q must appear exactly once as a day-name span, got %d:\n%s", day, got, html)
+		}
+	}
+}
+
+// fallbackWeek indexa por día: un staff sembrado Lun/Mié/Vie tiene filas activas
+// en 1, 3, 5 e inactivas en el resto.
+func TestFallbackWeek_IndexesByDay(t *testing.T) {
+	week := fallbackWeek([]ab.WorkCalendarWeekly{
+		{DayOfWeek: 1, IsActive: true, WorkStart: 480, WorkFinish: 840},
+		{DayOfWeek: 3, IsActive: true, WorkStart: 480, WorkFinish: 840},
+		{DayOfWeek: 5, IsActive: true, WorkStart: 480, WorkFinish: 840},
+	})
+
+	if len(week) != 7 {
+		t.Fatalf("week length = %d, want 7", len(week))
+	}
+	for i, want := range []bool{false, true, false, true, false, true, false} {
+		if week[i].Active != want {
+			t.Errorf("day %d: Active = %v, want %v", i, week[i].Active, want)
+		}
+	}
+}
+
+// toWCWeekly persiste el día que recibe, no uno que la fila lleve — la fila ya
+// no lleva uno. Esta es la aserción que hace irreproducible "activar martes,
+// guardar domingo".
+func TestToWCWeekly_PersistsTheGivenDay(t *testing.T) {
+	got := toWCWeekly(2, scheduleeditor.WeeklyRow{Active: true, WorkStart: 480, WorkFinish: 840})
+	if got.DayOfWeek != 2 {
+		t.Errorf("DayOfWeek = %d, want 2 (Tuesday)", got.DayOfWeek)
+	}
 }

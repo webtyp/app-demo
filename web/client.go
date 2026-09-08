@@ -16,6 +16,7 @@ import (
 	"webtyp.com/app-demo/modules/itemcatalogdemo"
 	"webtyp.com/app-demo/modules/medicalhistory"
 	"webtyp.com/app-demo/modules/reservation"
+	"webtyp.com/app-demo/modules/workschedule"
 	_ "webtyp.com/components/fieldset"
 	"webtyp.com/layout/platformd"
 	"webtyp.com/svg"
@@ -83,6 +84,7 @@ func main() {
 		medicalhistory.New(p),
 		reservation.New(p, env),   // ← sobre appointment_booking real
 		agenda.New(p, env),        // ← editor de agenda sobre appointment_booking real
+		workschedule.New(p, env),  // ← work_schedule real, vista read-only sobre tablas legadas
 		itemcatalogdemo.NewCatalog(p, env),     // ← catálogo real, crudview sin config custom
 		itemcatalogdemo.NewSpecialties(p, env), // ← especialidades reales
 		about.New(),

@@ -31,14 +31,21 @@ func init() {
 		// components/scheduleeditor's exception type + chrome labels (see
 		// components/scheduleeditor/README.md — "Translation keys").
 		{EN: "Closed", ES: "Cerrado"},
-		{EN: "Special", ES: "Especial"},
-		{EN: "hours", ES: "horas"},
+		{EN: "Special hours", ES: "Horario especial"},
+		{EN: "No exceptions", ES: "Sin excepciones"},
 		{EN: "Blocked", ES: "Bloqueado"},
 		{EN: "Add", ES: "Agregar"},
 		{EN: "Remove", ES: "Quitar"},
 		{EN: "Type", ES: "Tipo"},
 		{EN: "Date", ES: "Fecha"},
 		{EN: "Notes", ES: "Notas"},
+
+		// components/scheduleeditor's weekly grid column headers.
+		{EN: "Day", ES: "Día"},
+		{EN: "Work start", ES: "Entrada"},
+		{EN: "Work end", ES: "Salida"},
+		{EN: "Break start", ES: "Colación desde"},
+		{EN: "Break end", ES: "Colación hasta"},
 
 		// components/calendarslider's month/weekday names (date.MonthName /
 		// date.WeekdayName return these English keys; not yet called by any

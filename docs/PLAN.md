@@ -23,6 +23,7 @@ REVIEWER: none
 | 3 | G — eventos + FreeSlots | [PLAN_EVENTS.md](PLAN_EVENTS.md) | ✅ hecho (`v0.0.18`) |
 | 4 | H — item_catalog real | [PLAN_CATALOG](LAST_PLAN_EXECUTED.md) | ✅ hecho (`v0.0.16`) |
 | 5 | I — docs + limpieza | [PLAN_DOCS_CLEANUP.md](PLAN_DOCS_CLEANUP.md) | 🟡 en curso (estado en el master) |
+| 6 | J — agenda view fixes | [PLAN_AGENDA_VIEW.md](PLAN_AGENDA_VIEW.md) | 🟡 en curso (orquestador `AGENDA_VIEW_FIXES_MASTER_PLAN.md`) |
 
 ## Decisiones de la ejecución (registradas en el master §3/§7)
 

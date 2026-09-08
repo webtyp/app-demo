@@ -2,7 +2,7 @@
 // su plantilla semanal (7 días) y sus excepciones por fecha, persistido sobre
 // el módulo REAL appointment_booking vía el loopback.Caller de config. No es
 // un crudview: no hay "listado de registros"; es un editor de una sola forma,
-// montado por un componente propio (scheduleView).
+// montado por un componente propio (ScheduleView).
 package agenda
 
 import (
@@ -11,18 +11,40 @@ import (
 	"webtyp.com/components/scheduleeditor"
 	"webtyp.com/layout/platformd"
 	"webtyp.com/svg"
+	"webtyp.com/widget"
 
 	. "webtyp.com/dom"
 	. "webtyp.com/fmt"
 	. "webtyp.com/html"
 
 	ab "github.com/veltylabs/appointment_booking"
-	workschedule "github.com/veltylabs/work_schedule"
 
 	"webtyp.com/app-demo/config"
+	"webtyp.com/app-demo/modules/staffpick"
 )
 
 const Icon = svg.Icon("mod-agenda")
+
+// NameAgenda es la identidad de widget de la vista. La clase del módulo se
+// deriva de Name/Part, nunca de una string escrita a mano.
+const NameAgenda = widget.Name("agenda")
+
+const (
+	PartHeader  = widget.Part("header")
+	PartStaff   = widget.Part("staff")
+	PartTitle   = widget.Part("title")
+	PartSection = widget.Part("section")
+	PartBody    = widget.Part("body")
+)
+
+var (
+	clsRoot    = NameAgenda.Root()
+	clsTitle   = NameAgenda.Class(PartTitle)
+	clsHeader  = NameAgenda.Class(PartHeader)
+	clsStaff   = NameAgenda.Class(PartStaff)
+	clsSection = NameAgenda.Class(PartSection)
+	clsBody    = NameAgenda.Class(PartBody)
+)
 
 // Module es el módulo demo del editor de agenda.
 type Module struct {
@@ -42,14 +64,14 @@ func (m *Module) Icon() svg.Icon    { return Icon }
 
 // View devuelve el editor de agenda montado sobre el módulo real.
 func (m *Module) View() Component {
-	return &scheduleView{p: m.p, env: m.env, sel: NewString("")}
+	return &ScheduleView{p: m.p, env: m.env, sel: NewString("")}
 }
 
-// scheduleView es el componente del editor: un picker de profesional en la
+// ScheduleView es el componente del editor: un picker de profesional en la
 // cabecera y el scheduleeditor debajo. Al seleccionar otro profesional (o tras
 // una escritura) rehace el subárbol del editor leyendo la agenda por las ops
 // reales — el ScheduleEditor no es la fuente de verdad, el host lo remonta.
-type scheduleView struct {
+type ScheduleView struct {
 	Element // value embed
 	p       *platformd.Platform
 	env     *config.Env
@@ -58,13 +80,12 @@ type scheduleView struct {
 	// cambiar de profesional o tras una escritura. Un SignalNodes permite
 	// swap de nodo sin reconstruir el árbol del chasis.
 	editor *SignalNodes
-	// schedule es el panel read-only del horario del profesional, alimentado
-	// por work_schedule (lee sus tablas staff/workcalendar) — re-lleno en
-	// cada cambio de staff.
-	schedule *SignalNodes
 }
 
-func (s *scheduleView) Init(_ Ctx) {
+func (s *ScheduleView) WidgetName() widget.Name { return NameAgenda }
+func (s *ScheduleView) WidgetKind() widget.Kind { return widget.Form }
+
+func (s *ScheduleView) Init(_ Ctx) {
 	if s.sel.Get() == "" {
 		staff := s.env.Staff()
 		if len(staff) > 0 {
@@ -74,35 +95,12 @@ func (s *scheduleView) Init(_ Ctx) {
 	if s.editor == nil {
 		s.editor = NewNodes()
 	}
-	if s.schedule == nil {
-		s.schedule = NewNodes()
-	}
 	s.reloadEditor()
-	s.reloadSchedule()
-}
-
-// reloadSchedule re-llena el panel "Horario" del profesional elegido con las
-// filas de work_schedule.NewView (lista read-only sobre sus tablas).
-func (s *scheduleView) reloadSchedule() {
-	wsStaffID := s.env.WorkScheduleStaffID(s.sel.Get())
-	nodes := []*Element{}
-	if wsStaffID != 0 {
-		pres := workschedule.NewView(s.env.Caller(), wsStaffID)
-		if err := pres.Reload(); err == nil {
-			for _, it := range pres.Items() {
-				nodes = append(nodes, Li().Text(it.Label+": "+it.Description))
-			}
-		}
-	}
-	if len(nodes) == 0 {
-		nodes = append(nodes, Li().Text("Sin horario registrado"))
-	}
-	s.schedule.Set(nodes)
 }
 
 // selectedName devuelve el nombre del profesional seleccionado (linear scan
 // sobre la lista corta de la demo).
-func (s *scheduleView) selectedName() string {
+func (s *ScheduleView) selectedName() string {
 	for _, so := range s.env.Staff() {
 		if so.ID == s.sel.Get() {
 			return so.Name
@@ -111,35 +109,17 @@ func (s *scheduleView) selectedName() string {
 	return ""
 }
 
-// buildPicker arma el <select> de profesional.
-func (s *scheduleView) buildPicker() *Element {
-	sel := NewElement("select").Attr("name", "agenda-staff")
-	for _, so := range s.env.Staff() {
-		if so.ID == s.sel.Get() {
-			sel.Child(SelectedOption(so.ID, so.Name))
-		} else {
-			sel.Child(Option(so.ID, so.Name))
-		}
-	}
-	sel.On("change", func(ev Event) {
-		s.sel.Set(ev.TargetValue())
-		s.reloadEditor()
-		s.reloadSchedule()
-	})
-	return sel
-}
-
 // reloadEditor reconstruye el ScheduleEditor del profesional seleccionado: lee
 // la agenda vía ScheduleClient (ops reales) y lo monta como único hijo del
 // contenedor editor.
-func (s *scheduleView) reloadEditor() {
-	s.editor.Set([]*Element{Div().Attr("class", "agenda__editor").Child(s.buildEditor())})
+func (s *ScheduleView) reloadEditor() {
+	s.editor.Set([]*Element{Div().Child(s.buildEditor())})
 }
 
 // buildEditor lee la agenda del profesional seleccionado (ops reales) y arma el
 // ScheduleEditor con sus callbacks traducidos a escrituras. Separado de
 // reloadEditor para que un test pueda inspeccionar el subárbol renderizado.
-func (s *scheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
+func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 	client := ab.NewScheduleClient(s.env.Caller(), s.env.TenantID(), s.sel.Get())
 
 	var week []ab.WorkCalendarWeekly
@@ -164,8 +144,8 @@ func (s *scheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 		Week:       fallbackWeek(week),
 		Exceptions: toEditorExceptions(excs),
 		Holidays:   s.env.Holidays2026(),
-		OnWeeklyChange: func(r scheduleeditor.WeeklyRow) {
-			client.SaveWeeklyRow(toWCWeekly(r), func(err error) {
+		OnWeeklyChange: func(dayOfWeek int, r scheduleeditor.WeeklyRow) {
+			client.SaveWeeklyRow(toWCWeekly(dayOfWeek, r), func(err error) {
 				s.notifySave(err)
 				if err == nil {
 					s.reloadEditor()
@@ -191,28 +171,30 @@ func (s *scheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 	}
 }
 
-// fallbackWeek asegura 7 filas Dom..Sáb: las que vienen de la op se mantienen,
-// las que faltan van inactivas con horas 0 (un día sin fila = no agendado).
+// fallbackWeek asegura 7 filas Dom..Sáb indexadas por día: las que vienen de la
+// op se colocan en su propio índice, el resto quedan inactivas con horas 0 — un
+// día sin fila = no agendado. El índice ES el día, así que una fila sin llenar
+// ya no puede decir ser Domingo.
 func fallbackWeek(rows []ab.WorkCalendarWeekly) []scheduleeditor.WeeklyRow {
 	week := make([]scheduleeditor.WeeklyRow, 7)
 	for _, r := range rows {
 		dow := int(r.DayOfWeek)
-		if dow >= 0 && dow < 7 {
-			week[dow] = scheduleeditor.WeeklyRow{
-				DayOfWeek:   dow,
-				Active:      r.IsActive,
-				WorkStart:   int(r.WorkStart),
-				WorkFinish:  int(r.WorkFinish),
-				BreakStart:  int(r.BreakStart),
-				BreakFinish: int(r.BreakFinish),
-			}
+		if dow < 0 || dow > 6 {
+			continue
+		}
+		week[dow] = scheduleeditor.WeeklyRow{
+			Active:      r.IsActive,
+			WorkStart:   int(r.WorkStart),
+			WorkFinish:  int(r.WorkFinish),
+			BreakStart:  int(r.BreakStart),
+			BreakFinish: int(r.BreakFinish),
 		}
 	}
 	return week
 }
 
 // notifySave muestra el toast de resultado de una escritura.
-func (s *scheduleView) notifySave(err error) {
+func (s *ScheduleView) notifySave(err error) {
 	if s.p == nil {
 		return
 	}
@@ -223,15 +205,15 @@ func (s *scheduleView) notifySave(err error) {
 	s.p.Notify(Msg.Success, "Agenda guardada", platformd.Auto())
 }
 
-// Render arma el editor completo.
-func (s *scheduleView) Render() *Element {
-	return Div().Attr("class", "agenda").
-		Child(Div().Attr("class", "agenda__header").
-			Child(Span().Text("Profesional")).Child(s.buildPicker())).
-		Child(Div().Attr("class", "agenda__body").BindChildren(s.editor)).
-		Child(Div().Attr("class", "agenda_schedule").
-			Child(H2().Text("Horario")).
-			Child(Ul().BindChildren(s.schedule)))
+// Render arma el editor completo con el chrome de la vista.
+func (s *ScheduleView) Render() *Element {
+	return Div().Set(clsRoot.AsAttr()).
+		Child(H1().Set(clsTitle.AsAttr()).Text("Agenda")).
+		Child(Div().Set(clsHeader.AsAttr()).
+			Child(Span().Text("Profesional")).
+			Child(staffpick.Select(s.env.Staff(), s.sel, func(string) { s.reloadEditor() }).Set(clsStaff.AsAttr()))).
+		Child(H2().Set(clsSection.AsAttr()).Text("Plantilla semanal")).
+		Child(Div().Set(clsBody.AsAttr()).BindChildren(s.editor))
 }
 
 // ---------------------------------------------------------------------------
@@ -239,9 +221,9 @@ func (s *scheduleView) Render() *Element {
 // si la Etapa F las repite).
 // ---------------------------------------------------------------------------
 
-func toWCWeekly(r scheduleeditor.WeeklyRow) ab.WorkCalendarWeekly {
+func toWCWeekly(dayOfWeek int, r scheduleeditor.WeeklyRow) ab.WorkCalendarWeekly {
 	return ab.WorkCalendarWeekly{
-		DayOfWeek:   int64(r.DayOfWeek),
+		DayOfWeek:   int64(dayOfWeek),
 		IsActive:    r.Active,
 		WorkStart:   int64(r.WorkStart),
 		WorkFinish:  int64(r.WorkFinish),

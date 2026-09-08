@@ -4,7 +4,7 @@ package itemcatalogdemo
 
 import "webtyp.com/svg/sprite"
 
-func (m *catalogMod) IconSvg() *sprite.Sprite {
+func (m *CatalogModule) IconSvg() *sprite.Sprite {
 	return sprite.NewSprite(
 		sprite.Define(
 			IconCatalog,
@@ -14,7 +14,7 @@ func (m *catalogMod) IconSvg() *sprite.Sprite {
 	)
 }
 
-func (m *specialtyMod) IconSvg() *sprite.Sprite {
+func (m *SpecialtyModule) IconSvg() *sprite.Sprite {
 	return sprite.NewSprite(
 		sprite.Define(
 			IconSpecial,

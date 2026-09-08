@@ -132,7 +132,10 @@ func (v *reservationView) Init(_ Ctx) {
 	}
 	v.subscribed = true
 
-	cal := &calendarslider.CalendarSlider{}
+	// NumMonths: 3 explícito — la demo ofrece exactamente 3 meses rotando
+	// entre ellos (‹ del primero → último, › del último → primero), sin
+	// depender del default implícito de la librería.
+	cal := &calendarslider.CalendarSlider{NumMonths: 3}
 	v.daySig = NewString("")
 	cal.OnFilterChange(func(term string) {
 		v.daySig.Set(term)

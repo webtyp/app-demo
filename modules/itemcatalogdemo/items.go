@@ -21,25 +21,25 @@ const (
 	IconSpecial = svg.Icon("mod-specialties")
 )
 
-type catalogMod struct {
+type CatalogModule struct {
 	p   *platformd.Platform
 	env *config.Env
 }
 
-func NewCatalog(p *platformd.Platform, env *config.Env) *catalogMod {
-	return &catalogMod{p: p, env: env}
+func NewCatalog(p *platformd.Platform, env *config.Env) *CatalogModule {
+	return &CatalogModule{p: p, env: env}
 }
 
-var _ platformd.UIModule = (*catalogMod)(nil)
+var _ platformd.UIModule = (*CatalogModule)(nil)
 
-func (m *catalogMod) ModelName() string { return "catalog" }
-func (m *catalogMod) Label() string     { return "Catálogo" }
-func (m *catalogMod) Icon() svg.Icon    { return IconCatalog }
+func (m *CatalogModule) ModelName() string { return "catalog" }
+func (m *CatalogModule) Label() string     { return "Catálogo" }
+func (m *CatalogModule) Icon() svg.Icon    { return IconCatalog }
 
 // View monta el catálogo real con crudview.New(Config{}) SIN config custom —
 // el mismo layout que devices/medicalhistory, la prueba de que reusable module
 // + crudview = cero bifurcación por módulo.
-func (m *catalogMod) View() dom.Component {
+func (m *CatalogModule) View() dom.Component {
 	v, err := crudview.New(crudview.Config{
 		ParentID:  "catalog_item",
 		Presenter: itemcatalog.NewView(m.env.Caller()),
@@ -51,22 +51,22 @@ func (m *catalogMod) View() dom.Component {
 	return v
 }
 
-type specialtyMod struct {
+type SpecialtyModule struct {
 	p   *platformd.Platform
 	env *config.Env
 }
 
-func NewSpecialties(p *platformd.Platform, env *config.Env) *specialtyMod {
-	return &specialtyMod{p: p, env: env}
+func NewSpecialties(p *platformd.Platform, env *config.Env) *SpecialtyModule {
+	return &SpecialtyModule{p: p, env: env}
 }
 
-var _ platformd.UIModule = (*specialtyMod)(nil)
+var _ platformd.UIModule = (*SpecialtyModule)(nil)
 
-func (m *specialtyMod) ModelName() string { return "specialties" }
-func (m *specialtyMod) Label() string     { return "Especialidades" }
-func (m *specialtyMod) Icon() svg.Icon    { return IconSpecial }
+func (m *SpecialtyModule) ModelName() string { return "specialties" }
+func (m *SpecialtyModule) Label() string     { return "Especialidades" }
+func (m *SpecialtyModule) Icon() svg.Icon    { return IconSpecial }
 
-func (m *specialtyMod) View() dom.Component {
+func (m *SpecialtyModule) View() dom.Component {
 	v, err := crudview.New(crudview.Config{
 		ParentID:  "specialty",
 		Presenter: itemcatalog.NewSpecialtyView(m.env.Caller()),
