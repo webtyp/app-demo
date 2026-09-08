@@ -6,7 +6,7 @@ require (
 	github.com/veltylabs/appointment_booking v0.0.0
 	github.com/veltylabs/item_catalog v0.0.0
 	github.com/veltylabs/work_schedule v0.0.0
-	webtyp.com/components v0.6.20
+	webtyp.com/components v0.6.21
 	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.12
 	webtyp.com/events v0.0.4
@@ -44,7 +44,6 @@ replace webtyp.com/icons => ../icons
 // Local replace for unreleased work: components carries the new
 // scheduleeditor OnWeeklyChange signature and the RevealedBy(widget.Open)
 // reveal (the AGENDA_VIEW_FIXES gates). Drop once components publishes the tag.
-replace webtyp.com/components => ../components
 
 // widget's Form-holds-Open widening, consumed transitively by the local
 // components. Drop once widget publishes the tag.
