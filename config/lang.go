@@ -46,6 +46,7 @@ func init() {
 		{EN: "Work end", ES: "Salida"},
 		{EN: "Break start", ES: "Colación desde"},
 		{EN: "Break end", ES: "Colación hasta"},
+		{EN: "No break", ES: "Sin colación"},
 
 		// components/calendarslider's month/weekday names (date.MonthName /
 		// date.WeekdayName return these English keys; not yet called by any

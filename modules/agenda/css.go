@@ -22,7 +22,6 @@ func (s *ScheduleView) RenderCSS() *css.Stylesheet {
 		).
 		Part(PartHeader,
 			style.Row(style.Space2),
-			style.Center(),
 			style.ControlBox(),
 			style.As(style.Panel),
 			style.Round(style.RadiusMd),

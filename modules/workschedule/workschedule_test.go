@@ -16,10 +16,10 @@ type emptyCtx struct{}
 
 func (emptyCtx) OnCleanup(func()) {}
 
-func testList(t *testing.T, staffId string) (*scheduleList, *config.Env) {
+func testList(t *testing.T, staffId string) (*ScheduleList, *config.Env) {
 	t.Helper()
 	env := config.New()
-	s := &scheduleList{p: nil, env: env, sel: dom.NewString(staffId)}
+	s := &ScheduleList{p: nil, env: env, sel: dom.NewString(staffId)}
 	s.Init(&emptyCtx{})
 	return s, env
 }

@@ -574,7 +574,126 @@ the dev server speaks TLS and http returns a 400).
 | 4 | Dictionary | `config/lang.go` | check 6 empty; check 14 reads "Horario especial" |
 | 5 | Tests, README, index | `modules/agenda/agenda_test.go`, **new** `modules/workschedule/workschedule_test.go`, `README.md`, `docs/PLAN.md` | §8.1 and §8.2 all pass |
 
-## 10. What this deletes
+## 10. Residual work — three items this plan left open
+
+**Status: executed 2026-09-08 (`6490daf`). The critical defects are fixed and
+verified live. What follows is what the plan itself got wrong or did not
+reach.**
+
+### 10.1 `style.Center()` in `PartHeader` breaks the band — a defect in §4.4
+
+**This plan specified the wrong primitive**, and the executor implemented it
+faithfully. `modules/agenda/css.go` carries:
+
+```go
+		Part(PartHeader,
+			style.Row(style.Space2),
+			style.Center(),          // ← wrong
+			…
+		).
+```
+
+`Row` and `Center` both assign `rule.flowType`, so the later one wins outright.
+`Center()` is **not** cross-axis centering — `widget/style/flow.go:97` defines
+it as "a centered column with an optional maximum size (defaults to
+`Readable`)", emitting `margin-inline: auto; max-width: var(--max-width);
+width: 100%`. It therefore *replaced* the flex row entirely.
+
+Measured live: `h1`, `h2`, `.scheduleeditor__week-head` and every week row start
+at **x=16** and span **895px**; `.agenda__header` starts at **x=171** and spans
+**584px** — a band that is neither aligned with the page nor a flex row, which
+is also why "Profesional" butts against the `<select>` with no gap.
+
+**The fix is to delete the line.** `Row(gap)` already emits
+`align-items: center` (`widget/style/emit_flowdecls.go:21-22`), so the vertical
+centering the plan wanted is free:
+
+```go
+		Part(PartHeader,
+			style.Row(style.Space2),
+			style.ControlBox(),
+			style.As(style.Panel),
+			style.Round(style.RadiusMd),
+		).
+```
+
+**Acceptance:** in the running app,
+`document.querySelector('.agenda__header').getBoundingClientRect().x` equals the
+`h1`'s `x` (16), and the band spans the same width as the weekly grid.
+
+**Anti-footgun for the next plan:** `Row`, `Stack`, `Grid`, `FixedGrid`,
+`Center`, `Split`, `ScrollRow` are all *the same slot*. Never list two in one
+`Part` — the last silently wins and nothing warns.
+
+### 10.2 "No break" renders as 06:00
+
+`appointment_booking` encodes "no break" as `BreakStart == 0 && BreakFinish == 0`,
+and `scheduleeditor`'s own README states "the break is shown and used only when
+both break fields are non-zero". **That is not what it does.** `hourOptions`
+floors at 360 (06:00), so a 0 has no matching `<option>` and the select falls
+back to its first one.
+
+Measured live: `staff-tony`'s Monday — seeded with **no break** — renders
+`Colación desde 06:00 / Colación hasta 06:00`. Before this plan the columns were
+unlabelled, so the wrong value was merely meaningless; now that they read
+"Colación desde/hasta" it is legible as a false statement.
+
+It is not currently corrupting: `weeklyChange` copies the stored row and mutates
+only the touched field, so 0/0 survives untouched edits. Touching either break
+select persists a real 06:00 break.
+
+This is a **`components/scheduleeditor`** defect (pre-existing, not introduced
+here), so the fix belongs in that repo, not in a local patch. Either render the
+two break selects only when the row has a break, or give them an explicit
+"sin colación" option carrying the value `0`.
+
+### 10.3 `modules/workschedule` has no chrome
+
+Stage 3 scoped the chrome work to `modules/agenda` only. The new
+`modules/workschedule` was therefore created the way `agenda` used to be:
+
+- `modules/workschedule/workschedule.go` → `scheduleList.Render()` returns a
+  bare `Div()` with **no class at all**;
+- the package has **no `css.go`**;
+- rendered live at `#workschedule`, the view is flush to the viewport edge with
+  zero padding and its `<h2>` is indistinguishable from the list items.
+
+That is §1.2 of this plan, relocated into the module the plan created. The
+executor followed the instructions; the instructions were incomplete.
+
+**The fix** is the same treatment §4.2–§4.4 specified for `agenda`, applied to
+`modules/workschedule`:
+
+1. Declare the widget identity in `workschedule.go`:
+
+   ```go
+   const NameWorkSchedule = widget.Name("workschedule")
+
+   const (
+       PartTitle  = widget.Part("title")
+       PartHeader = widget.Part("header")
+       PartList   = widget.Part("list")
+   )
+
+   func (s *scheduleList) WidgetName() widget.Name { return NameWorkSchedule }
+   func (s *scheduleList) WidgetKind() widget.Kind { return widget.Form }
+   ```
+
+2. Set the derived classes on the elements `Render()` builds — root, the `H2`,
+   the picker band, the `Ul` — via `NameWorkSchedule.Root().AsAttr()` and
+   `NameWorkSchedule.Class(Part…).AsAttr()`. No hand-written class strings.
+
+3. Add `modules/workschedule/css.go` (`//go:build !wasm`) with a `RenderCSS()`
+   built from `style.For(s)`, mirroring `modules/agenda/css.go`: `Stack` +
+   `Pad` on the root, `FontSize`/`FontWeight` on the title, `Row` + `Center` +
+   `ControlBox` + `As(Panel)` on the header band, `Stack` on the list. Every
+   value a token — never a raw `px`/`rem`.
+
+**Acceptance:** `grep -c "\.workschedule" web/public/style.css` > 0, and
+`getComputedStyle(document.querySelector('.workschedule')).padding` is non-zero
+in the running app. The §4.1 discovery fallback applies here too.
+
+## 11. What this deletes
 
 `scheduleView.schedule`, `scheduleView.reloadSchedule`, `scheduleView.buildPicker`,
 the `agenda_schedule` markup block, the `work_schedule` import in `agenda`, the
