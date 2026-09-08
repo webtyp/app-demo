@@ -2,7 +2,7 @@
 PLAN: "chore(demo): drop every local replace, all deps to latest published versions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11756890902070943952
 ---
 
