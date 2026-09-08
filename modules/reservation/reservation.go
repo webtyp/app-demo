@@ -22,6 +22,7 @@ package reservation
 import (
 	"webtyp.com/components/calendarslider"
 	"webtyp.com/components/targethour"
+	"webtyp.com/events"
 	"webtyp.com/layout/crudview"
 	"webtyp.com/layout/platformd"
 	"webtyp.com/model"
@@ -54,34 +55,104 @@ func (m *Module) ModelName() string { return "reservation" }
 func (m *Module) Label() string     { return "Reserva Hora" }
 func (m *Module) Icon() svg.Icon    { return Icon }
 
-// View monta el crudview sobre el módulo real.
+// View monta el crudview sobre el módulo real, envuelto en un componente propio
+// (reservationView) cuyo Init suscribe a los eventos de appointment_booking: al
+// cambiar la agenda del médico en foco (schedule.changed) o al crearse/
+// cancelarse una reserva, la lista y los huecos libres se refrescan sin recargar
+// la página — la sincronía por eventos del DEMO_AGENDA (§4.4).
 func (m *Module) View() Component {
 	ids, err := unixid.NewUnixID()
 	if err != nil {
 		panic(err)
 	}
 
-	cal := &calendarslider.CalendarSlider{}
-
-	// El Context (área+médico) y el store comparten la señal del médico: al
-	// cambiar el médico, el Context re-acota store.staffId y pide Reload.
-	ctx := &reservationContext{
-		env:          m.env,
-		staffOptions: m.env.Staff(),
+	return &reservationView{
+		p:   m.p,
+		env: m.env,
+		ids: ids,
 	}
+}
 
-	store := &reservationStore{env: m.env, staff: ctx.staff}
+// reservationView envuelve el crudview de reservas. Init corre UNA vez (antes
+// del primer render): construye el crudview, suscribe al broker y deja el bridge
+// que los eventos usan para refrescar lista + huecos.
+type reservationView struct {
+	Element // value embed
+	p       *platformd.Platform
+	env     *config.Env
+	ids     model.IDGenerator
 
-	// byDay adapta el Presenter: el filtro (término del calendario) filtra la
-	// lista por día.
+	cv         *crudview.CrudView
+	target     *targethour.TargetHour // el list concreto, guardado para FreeSlots
+	ctx        *reservationContext
+	store      *reservationStore
+	daySig     *SignalString // día activo, lo setea el calendario via OnFilterChange
+	subscribed bool
+	// refreshFn, si no es nil, reemplaza el refresh() por defecto — el único hook
+	// que los tests necesitan para contar recargas sin montar el DOM.
+	refreshFn func()
+}
+
+// currentStaff devuelve el médico scopeado actualmente, o "".
+func (v *reservationView) currentStaff() string {
+	if v.ctx == nil || v.ctx.staff == nil {
+		return ""
+	}
+	return v.ctx.staff.Get()
+}
+
+// currentDay devuelve el día activo ("YYYY-MM-DD"), o "".
+func (v *reservationView) currentDay() string {
+	if v.daySig == nil {
+		return ""
+	}
+	return v.daySig.Get()
+}
+
+// refresh recarga la lista y re-llena los huecos libres del día activo. Es el
+// camino único que usan los eventos (schedule.changed / reserva) y el cambio de
+// médico. FreeSlots se setea ANTES de Reload para que filter()→list.SetItems
+// ya los dibuje dentro de la misma pasada.
+func (v *reservationView) refresh() {
+	if v.refreshFn != nil {
+		v.refreshFn()
+		return
+	}
+	if v.target != nil && v.store != nil {
+		v.target.FreeSlots = v.store.freeSlotsForDay(v.currentDay())
+	}
+	if v.cv != nil {
+		_ = v.cv.Reload()
+	}
+}
+
+func (v *reservationView) Init(_ Ctx) {
+	if v.subscribed {
+		return
+	}
+	v.subscribed = true
+
+	cal := &calendarslider.CalendarSlider{}
+	v.daySig = NewString("")
+	cal.OnFilterChange(func(term string) {
+		v.daySig.Set(term)
+		v.refresh()
+	})
+
+	v.ctx = &reservationContext{
+		env:          v.env,
+		staffOptions: v.env.Staff(),
+	}
+	v.store = &reservationStore{env: v.env, staff: v.ctx.staff}
+
 	cv, err := crudview.New(crudview.Config{
-		ParentID:  m.ModelName(),
-		Presenter: byDay{view.New(store, &Reservation{}, view.WithTitle("Reserva Hora"))},
-		IDs:       ids,
+		ParentID:  "reservation",
+		Presenter: byDay{view.New(v.store, &Reservation{}, view.WithTitle("Reserva Hora"))},
+		IDs:       v.ids,
 		Filter:    cal,
-		Context:   ctx,
+		Context:   v.ctx,
 		List: func(selected *SignalString, onSelect func(view.Item)) crudview.ListView {
-			return &targethour.TargetHour{
+			th := &targethour.TargetHour{
 				Selected: selected,
 				OnSelect: onSelect,
 				StatusOf: func(it view.Item) targethour.Status {
@@ -93,31 +164,69 @@ func (m *Module) View() Component {
 					}
 					return targethour.StatusPending
 				},
+				// Hueco libre clicado: anota la hora elegida (el día ya lo trae
+				// el calendario). Pre-llenar el form queda a un engagement del
+				// form; aquí se informa al usuario de qué hora quedó marcada.
+				OnPickFree: func(hhmm string) {
+					v.p.Notify(Msg.Info, "Hora libre "+hhmm, platformd.Auto())
+				},
 			}
+			v.target = th
+			return th
 		},
 	})
 	if err != nil {
 		panic(err)
 	}
+	v.cv = cv
 
-	// Cambiar de médico re-acota los datos (scope, no búsqueda): el Context no
-	// es widget.Filterable (ver Etapa E), así que el cableado es del módulo.
-	ctx.onStaffChange = func(staffId string) {
-		store.staffId = staffId
-		_ = cv.Reload()
+	v.ctx.onStaffChange = func(staffId string) {
+		v.store.staffId = staffId
+		v.refresh()
 	}
 
-	cv.OnNew = func() { m.p.Notify(Msg.Info, "Nueva reserva", platformd.Auto()) }
+	cv.OnNew = func() { v.p.Notify(Msg.Info, "Nueva reserva", platformd.Auto()) }
 	cv.OnSaved = func(err error) {
 		if err == nil {
-			m.p.Notify(Msg.Success, "Reserva creada", platformd.Auto())
-			_ = cv.Reload()
+			v.p.Notify(Msg.Success, "Reserva creada", platformd.Auto())
+			v.refresh()
 			return
 		}
-		m.p.Notify(Msg.Error, err.Error(), platformd.Auto())
+		v.p.Notify(Msg.Error, err.Error(), platformd.Auto())
 	}
 
-	return cv
+	// Suscripción in-proc al broker de la demo (en producción mjosefa-cms:
+	// webtyp/sse). El broker in-proc entrega el payload concreto sin codificar.
+	broker := v.env.Broker()
+	broker.Subscribe(ab.EventScheduleChanged, v.onScheduleChanged)
+	for _, topic := range []string{
+		ab.EventReservationCreated,
+		ab.EventReservationCancelled,
+		ab.EventReservationCompleted,
+		ab.EventReservationNoShow,
+	} {
+		broker.Subscribe(topic, func(events.Event) { v.refresh() })
+	}
+}
+
+// onScheduleChanged maneja schedule.changed: solo refresca si el evento es del
+// médico en foco. Separado del Subscribe para poder probarlo unitariamente.
+func (v *reservationView) onScheduleChanged(e events.Event) {
+	pl, ok := e.Payload.(*ab.ScheduleChangedPayload)
+	if !ok {
+		return
+	}
+	if pl.StaffId != v.currentStaff() {
+		return // solo si es el médico en foco
+	}
+	v.refresh()
+}
+
+func (v *reservationView) Render() *Element {
+	if v.cv == nil {
+		return Div()
+	}
+	return Div().Child(v.cv)
 }
 
 // reservationContext es el slot Context del crudview: selects de área
@@ -353,16 +462,25 @@ func toLocal(r *ab.Reservation) *Reservation {
 
 // slotStartUTC arma el slot_start_utc (segundos epoch) desde "YYYY-MM-DD" +
 // "HH:MM". 0 si falta algo o no se puede parsear.
+// slotStartUTC arma el slot_start_utc (segundos epoch) desde "YYYY-MM-DD" +
+// "HH:MM". "HH:MM" es la hora LOCAL que el usuario elige en el form — la misma
+// conversión (LocalIntToUnixUTC con la zona del work_calendar_config) que hace
+// list_availability al alinear slots y reservas. ParseDateTime sin zona
+// produciría un UTC bruto, desalineado con los huecos (bug corregido).
 func slotStartUTC(day, hour string) int64 {
 	if day == "" || hour == "" {
 		return 0
 	}
-	nano, err := tintime.ParseDateTime(day, hour)
+	minOfDay, err := tintime.ParseTime(hour)
 	if err != nil {
 		return 0
 	}
-	return nano / 1000000000
+	return ab.LocalIntToUnixUTC(unixDay(day), int(minOfDay), timezoneDemo)
 }
+
+// timezoneDemo es la zona de los work_calendar_config sembrados en config —
+// misma constante que el seed de reservas usa.
+const timezoneDemo = "America/Santiago"
 
 func unixDay(dateStr string) int64 {
 	nano, err := tintime.ParseDate(dateStr)

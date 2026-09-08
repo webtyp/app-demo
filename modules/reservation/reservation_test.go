@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"webtyp.com/dom"
+	"webtyp.com/events"
 
 	ab "github.com/veltylabs/appointment_booking"
 
@@ -191,6 +192,73 @@ func TestFreeSlots_NoStaffOrDay_Empty(t *testing.T) {
 
 	if got := store.freeSlotsForDay(""); got != nil || len(got) != 0 {
 		t.Fatalf("no staff/day must yield empty slots, got %v", got)
+	}
+}
+
+// TestScheduleChanged_ReloadsReservation: el evento schedule.changed del médico
+// en foco gatilla un refresh; el de otro médico, cero.
+func TestScheduleChanged_ReloadsReservation(t *testing.T) {
+	env := testEnv(t)
+	ctx := &reservationContext{env: env, staffOptions: env.Staff()}
+	ctx.staff = dom.NewString("staff-natasha")
+
+	v := &reservationView{env: env, ctx: ctx}
+
+	calls := 0
+	v.refreshFn = func() { calls++ }
+
+	// Evento del médico en foco → 1 refresh.
+	v.onScheduleChanged(events.Event{Payload: &ab.ScheduleChangedPayload{StaffId: "staff-natasha"}})
+	if calls != 1 {
+		t.Fatalf("focused staff event: expected 1 refresh, got %d", calls)
+	}
+
+	// Evento de otro médico → sin refresh.
+	v.onScheduleChanged(events.Event{Payload: &ab.ScheduleChangedPayload{StaffId: "staff-thor"}})
+	if calls != 1 {
+		t.Fatalf("other-staff event must not refresh, got %d calls", calls)
+	}
+
+	// Payload de otro tipo → ignorado.
+	v.onScheduleChanged(events.Event{Payload: &ab.Reservation{}})
+	if calls != 1 {
+		t.Fatalf("non-payload event must not refresh, got %d calls", calls)
+	}
+}
+
+// TestReservationCreated_RemovesFreeSlot: crear en un hueco libre hace que al
+// recomputar ese "HH:MM" ya no esté entre los FreeSlots.
+func TestReservationCreated_RemovesFreeSlot(t *testing.T) {
+	env := testEnv(t)
+	store := &reservationStore{env: env, staff: dom.NewString("staff-natasha"), staffId: "staff-natasha"}
+
+	before := store.freeSlotsForDay("2026-09-14") // lunes, Natasha agenda
+	found14 := false
+	for _, s := range before {
+		if s == "14:00" {
+			found14 = true
+		}
+	}
+	if !found14 {
+		t.Fatalf("expected 14:00 free before booking; got %v", before)
+	}
+
+	// Reservar las 14:00.
+	err := store.Save(&Reservation{
+		PatientRun:  "200000001",
+		PatientName: "Paciente de las dos",
+		Day:         "2026-09-14",
+		Hour:        "14:00",
+	})
+	if err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	after := store.freeSlotsForDay("2026-09-14")
+	for _, s := range after {
+		if s == "14:00" {
+			t.Errorf("14:00 must disappear from FreeSlots after booking; got %v", after)
+		}
 	}
 }
 func TestCreate_SlotTaken(t *testing.T) {
