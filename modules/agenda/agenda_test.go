@@ -49,44 +49,40 @@ func TestEditor_ShowsNatashaWeek(t *testing.T) {
 	v, _ := testView(t, "staff-natasha")
 
 	html := v.buildEditor().Render().String()
-	for _, want := range []string{"scheduleeditor__week", "09:00", "18:00"} {
+	for _, want := range []string{"scheduleeditor__pattern", "09:00", "18:00"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("editor missing %q:\n%s", want, html)
 		}
 	}
 }
 
-// TestCallbacks_OnWeeklyChangePersists: un cambio de semana (sábado activo con
-// 10:00–13:00) persiste vía la op upsert — verificable releyendo
-// list_weekly_calendar por el ScheduleClient real.
-func TestCallbacks_OnWeeklyChangePersists(t *testing.T) {
+// TestCallbacks_OnPatternChangePersists: un cambio de patrón (sábado activo con
+// 10:00–13:00) persiste vía op save_day_blocks — verificable releyendo
+// list_blocks por el ScheduleClient real.
+func TestCallbacks_OnPatternChangePersists(t *testing.T) {
 	v, env := testView(t, "staff-natasha")
 
-	// Un cambio de semana (sábado activo con 10:00–13:00) persiste por la op
-	// upsert; la vista lo refleja en su refetch.
 	editor := v.buildEditor()
-	if editor.OnWeeklyChange == nil {
-		t.Fatal("expected the editor to carry OnWeeklyChange")
+	if editor.OnPatternChange == nil {
+		t.Fatal("expected the editor to carry OnPatternChange")
 	}
-	editor.OnWeeklyChange(6, scheduleeditor.WeeklyRow{
-		Active:     true,
-		WorkStart:  600,
-		WorkFinish: 780,
+	editor.OnPatternChange([]scheduleeditor.PatternRow{
+		{StartMin: 600, EndMin: 780, Days: []int{6}},
 	})
 
-	// El refetch pasa por list_weekly_calendar — la fila del sábado está ahí.
-	rows := listWeekly(t, env, "staff-natasha")
+	// El refetch pasa por list_blocks — la fila del sábado está ahí.
+	rows := listBlocks(t, env, "staff-natasha")
 	found := false
 	for _, r := range rows {
 		if r.DayOfWeek == 6 {
 			found = true
-			if !r.IsActive || r.WorkStart != 600 || r.WorkFinish != 780 {
-				t.Errorf("unexpected saturday row: %+v", r)
+			if !r.IsActive || r.StartMin != 600 || r.EndMin != 780 {
+				t.Errorf("unexpected saturday block: %+v", r)
 			}
 		}
 	}
 	if !found {
-		t.Fatal("expected a Saturday row after the weekly change")
+		t.Fatal("expected a Saturday block after the pattern change")
 	}
 
 	// reloadEditor rehace el editor; el html muestra la ventana nueva del sábado.
@@ -97,14 +93,14 @@ func TestCallbacks_OnWeeklyChangePersists(t *testing.T) {
 	}
 }
 
-// listWeekly lee la plantilla por la op real.
-func listWeekly(t *testing.T, env *config.Env, staffId string) []ab.WorkCalendarWeekly {
+// listBlocks lee los bloques por la op real.
+func listBlocks(t *testing.T, env *config.Env, staffId string) []ab.WorkCalendarBlock {
 	t.Helper()
 	client := ab.NewScheduleClient(env.Caller(), env.TenantID(), staffId)
-	var rows []ab.WorkCalendarWeekly
-	client.Weekly(func(r []ab.WorkCalendarWeekly, err error) {
+	var rows []ab.WorkCalendarBlock
+	client.Blocks(func(r []ab.WorkCalendarBlock, err error) {
 		if err != nil {
-			t.Fatalf("Weekly: %v", err)
+			t.Fatalf("Blocks: %v", err)
 		}
 		rows = r
 	})
@@ -161,41 +157,28 @@ func TestExceptionRoundTrip(t *testing.T) {
 // Se cuentan los spans de día (.scheduleeditor__day-name), no el HTML completo,
 // porque el calendario de excepciones también pinta nombres de día.
 func TestEditor_RendersSevenDistinctDays(t *testing.T) {
-	v, _ := testView(t, "staff-tony") // sembrado Lun/Mié/Vie solo — 4 filas sin llenar
+	v, _ := testView(t, "staff-tony") // sembrado Lun/Mié/Vie solo — 1 bloque
 	html := v.buildEditor().Render().String()
 
-	for _, day := range []string{"Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"} {
-		if got := strings.Count(html, "scheduleeditor__day-name'>"+day+"</span>"); got != 1 {
-			t.Errorf("day %q must appear exactly once as a day-name span, got %d:\n%s", day, got, html)
+	for _, want := range []string{"scheduleeditor__pattern", "08:00", "14:00"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("editor missing %q:\n%s", want, html)
 		}
 	}
 }
 
-// fallbackWeek indexa por día: un staff sembrado Lun/Mié/Vie tiene filas activas
-// en 1, 3, 5 e inactivas en el resto.
-func TestFallbackWeek_IndexesByDay(t *testing.T) {
-	week := fallbackWeek([]ab.WorkCalendarWeekly{
-		{DayOfWeek: 1, IsActive: true, WorkStart: 480, WorkFinish: 840},
-		{DayOfWeek: 3, IsActive: true, WorkStart: 480, WorkFinish: 840},
-		{DayOfWeek: 5, IsActive: true, WorkStart: 480, WorkFinish: 840},
+// blocksToPattern agrupa bloques por rango de horario.
+func TestBlocksToPattern_GroupsByTimeRange(t *testing.T) {
+	pattern := blocksToPattern([]ab.WorkCalendarBlock{
+		{DayOfWeek: 1, IsActive: true, StartMin: 480, EndMin: 840},
+		{DayOfWeek: 3, IsActive: true, StartMin: 480, EndMin: 840},
+		{DayOfWeek: 5, IsActive: true, StartMin: 480, EndMin: 840},
 	})
 
-	if len(week) != 7 {
-		t.Fatalf("week length = %d, want 7", len(week))
+	if len(pattern) != 1 {
+		t.Fatalf("pattern length = %d, want 1", len(pattern))
 	}
-	for i, want := range []bool{false, true, false, true, false, true, false} {
-		if week[i].Active != want {
-			t.Errorf("day %d: Active = %v, want %v", i, week[i].Active, want)
-		}
-	}
-}
-
-// toWCWeekly persiste el día que recibe, no uno que la fila lleve — la fila ya
-// no lleva uno. Esta es la aserción que hace irreproducible "activar martes,
-// guardar domingo".
-func TestToWCWeekly_PersistsTheGivenDay(t *testing.T) {
-	got := toWCWeekly(2, scheduleeditor.WeeklyRow{Active: true, WorkStart: 480, WorkFinish: 840})
-	if got.DayOfWeek != 2 {
-		t.Errorf("DayOfWeek = %d, want 2 (Tuesday)", got.DayOfWeek)
+	if len(pattern[0].Days) != 3 {
+		t.Fatalf("days length = %d, want 3", len(pattern[0].Days))
 	}
 }

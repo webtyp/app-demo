@@ -523,14 +523,12 @@ func (s *reservationStore) freeSlotsForDay(day string) []string {
 	if callErr != nil {
 		return nil
 	}
+	midnightLocalUtc := ab.LocalIntToUnixUTC(unixDay(day), 0, timezoneDemo)
 	slots := make([]string, 0, out.Len())
 	for i := 0; i < out.Len(); i++ {
 		slot := out.At(i).(*ab.TimeSlot)
-		// FormatTime espera UnixNano; la hora local del inicio del hueco.
-		hhmm := tintime.FormatTime(slot.StartUtc * 1000000000)
-		if len(hhmm) >= 5 {
-			hhmm = hhmm[:5]
-		}
+		localMin := (slot.StartUtc - midnightLocalUtc) / 60
+		hhmm := Sprintf("%02d:%02d", localMin/60, localMin%60)
 		slots = append(slots, hhmm)
 	}
 	return slots

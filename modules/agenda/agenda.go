@@ -122,9 +122,9 @@ func (s *ScheduleView) reloadEditor() {
 func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 	client := ab.NewScheduleClient(s.env.Caller(), s.env.TenantID(), s.sel.Get())
 
-	var week []ab.WorkCalendarWeekly
-	client.Weekly(func(rows []ab.WorkCalendarWeekly, err error) {
-		week = rows
+	var blocks []ab.WorkCalendarBlock
+	client.Blocks(func(rows []ab.WorkCalendarBlock, err error) {
+		blocks = rows
 		if err != nil {
 			s.notifySave(err)
 		}
@@ -141,16 +141,33 @@ func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 	})
 
 	return &scheduleeditor.ScheduleEditor{
-		Week:       fallbackWeek(week),
+		Pattern:    blocksToPattern(blocks),
 		Exceptions: toEditorExceptions(excs),
 		Holidays:   s.env.Holidays2026(),
-		OnWeeklyChange: func(dayOfWeek int, r scheduleeditor.WeeklyRow) {
-			client.SaveWeeklyRow(toWCWeekly(dayOfWeek, r), func(err error) {
-				s.notifySave(err)
-				if err == nil {
-					s.reloadEditor()
+		OnPatternChange: func(rows []scheduleeditor.PatternRow) {
+			for dow := 0; dow <= 6; dow++ {
+				var dayBlocks []ab.WorkCalendarBlock
+				for _, r := range rows {
+					for _, d := range r.Days {
+						if d == dow {
+							dayBlocks = append(dayBlocks, ab.WorkCalendarBlock{
+								TenantId:  s.env.TenantID(),
+								StaffId:   s.sel.Get(),
+								DayOfWeek: int64(dow),
+								StartMin:  int64(r.StartMin),
+								EndMin:    int64(r.EndMin),
+								IsActive:  true,
+							})
+						}
+					}
 				}
-			})
+				client.SaveDayBlocks(dow, dayBlocks, func(err error) {
+					s.notifySave(err)
+					if err == nil {
+						s.reloadEditor()
+					}
+				})
+			}
 		},
 		OnExceptionAdd: func(x scheduleeditor.Exception) {
 			client.AddException(toWCException(x), func(err error) {
@@ -171,26 +188,44 @@ func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 	}
 }
 
-// fallbackWeek asegura 7 filas Dom..Sáb indexadas por día: las que vienen de la
-// op se colocan en su propio índice, el resto quedan inactivas con horas 0 — un
-// día sin fila = no agendado. El índice ES el día, así que una fila sin llenar
-// ya no puede decir ser Domingo.
-func fallbackWeek(rows []ab.WorkCalendarWeekly) []scheduleeditor.WeeklyRow {
-	week := make([]scheduleeditor.WeeklyRow, 7)
-	for _, r := range rows {
-		dow := int(r.DayOfWeek)
-		if dow < 0 || dow > 6 {
+func blocksToPattern(blocks []ab.WorkCalendarBlock) []scheduleeditor.PatternRow {
+	type rangeKey struct {
+		start, end int
+	}
+	var keys []rangeKey
+	daysMap := make([][]int, 0)
+
+	for _, b := range blocks {
+		if !b.IsActive || b.DayOfWeek < 0 || b.DayOfWeek > 6 {
 			continue
 		}
-		week[dow] = scheduleeditor.WeeklyRow{
-			Active:      r.IsActive,
-			WorkStart:   int(r.WorkStart),
-			WorkFinish:  int(r.WorkFinish),
-			BreakStart:  int(r.BreakStart),
-			BreakFinish: int(r.BreakFinish),
+		sm, em := int(b.StartMin), int(b.EndMin)
+		dow := int(b.DayOfWeek)
+
+		idx := -1
+		for i, k := range keys {
+			if k.start == sm && k.end == em {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			keys = append(keys, rangeKey{start: sm, end: em})
+			daysMap = append(daysMap, []int{dow})
+		} else {
+			daysMap[idx] = append(daysMap[idx], dow)
 		}
 	}
-	return week
+
+	rows := make([]scheduleeditor.PatternRow, len(keys))
+	for i, k := range keys {
+		rows[i] = scheduleeditor.PatternRow{
+			StartMin: k.start,
+			EndMin:   k.end,
+			Days:     daysMap[i],
+		}
+	}
+	return rows
 }
 
 // notifySave muestra el toast de resultado de una escritura.
@@ -221,16 +256,6 @@ func (s *ScheduleView) Render() *Element {
 // si la Etapa F las repite).
 // ---------------------------------------------------------------------------
 
-func toWCWeekly(dayOfWeek int, r scheduleeditor.WeeklyRow) ab.WorkCalendarWeekly {
-	return ab.WorkCalendarWeekly{
-		DayOfWeek:   int64(dayOfWeek),
-		IsActive:    r.Active,
-		WorkStart:   int64(r.WorkStart),
-		WorkFinish:  int64(r.WorkFinish),
-		BreakStart:  int64(r.BreakStart),
-		BreakFinish: int64(r.BreakFinish),
-	}
-}
 
 func toWCException(x scheduleeditor.Exception) ab.WorkCalendarException {
 	return ab.WorkCalendarException{
