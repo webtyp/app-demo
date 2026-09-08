@@ -4,6 +4,7 @@ EXECUTOR: jules
 REVIEWER: none
 STATUS: review
 SESSION: 11756890902070943952
+PR: https://github.com/webtyp/app-demo/pull/3
 ---
 
 # PLAN — registro de ejecución para `app-demo`
