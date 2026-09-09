@@ -6,7 +6,7 @@ require (
 	github.com/veltylabs/appointment_booking v0.1.5
 	github.com/veltylabs/item_catalog v0.3.4
 	github.com/veltylabs/work_schedule v0.1.4
-	webtyp.com/components v0.6.24
+	webtyp.com/components v0.6.26
 	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.12
 	webtyp.com/events v0.0.5
@@ -22,12 +22,12 @@ require (
 	webtyp.com/time v0.5.6
 	webtyp.com/unixid v0.2.28
 	webtyp.com/view v0.5.7
-	webtyp.com/widget v0.6.26
+	webtyp.com/widget v0.6.28
 )
 
 require (
 	webtyp.com/color v0.1.2 // indirect
-	webtyp.com/date v0.0.6 // indirect
+	webtyp.com/date v0.0.7 // indirect
 	webtyp.com/ddl v0.0.15 // indirect
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/form v0.4.9 // indirect
