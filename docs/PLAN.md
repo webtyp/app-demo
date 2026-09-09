@@ -2,6 +2,8 @@
 PLAN: "fix(agenda): Spanish chrome for the pattern editor + buttons on the shared recipe"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 7195889616396498878
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
