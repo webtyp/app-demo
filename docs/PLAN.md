@@ -2,8 +2,9 @@
 PLAN: "fix(agenda): Spanish chrome for the pattern editor + buttons on the shared recipe"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 7195889616396498878
+PR: https://github.com/webtyp/app-demo/pull/4
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
