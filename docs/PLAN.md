@@ -56,6 +56,7 @@ are gone and these are registered:
 | `Marked days` | Días marcados |
 | `Hours for marked days` | Horario de días marcados |
 | `Sun`…`Sat` | Dom, Lun, Mar, Mié, Jue, Vie, Sáb |
+| `From` / `To` | Desde / Hasta |
 
 Also already done: `modules/agenda/agenda.go` no longer renders its own
 `<h2>Plantilla semanal</h2>`, which sat directly above the component's own
@@ -176,3 +177,24 @@ Then the dictionary and heading checks, which must all hold:
 | 2 | Fix fallout | wherever the compiler points | `go build ./... && go vet ./...` green |
 | 3 | Dictionary parity | `config/lang.go` | every key in the component's README is registered |
 | 4 | Verify | — | §5's four commands and six checks all pass |
+
+## 8. Cierre — lo que además se hizo en esta ronda
+
+El bump de §2 no alcanzaba: con los botones arreglados, la vista seguía sin ser
+usable. Se cerró subiendo cada decisión a su capa (detalle completo en
+[BUTTON_SYSTEM_MASTER_PLAN §7](https://github.com/webtyp/webtyp/blob/main/docs/BUTTON_SYSTEM_MASTER_PLAN.md)):
+
+- **La semana empieza el lunes.** `date v0.0.7` es ahora el único lugar que
+  decide el primer día (`FirstWeekday`/`WeekOrder`/`WeekColumn`), con lunes por
+  defecto. Una app que necesite domingo llama `date.SetFirstWeekday(date.Sunday)`
+  en `config/`, junto a `lang.OutLang` — **este repo no lo llama**, el default
+  ya es el correcto para su idioma.
+- **Los chips de día son pastillas.** `widget v0.6.27` aporta
+  `style.VisuallyHidden()` y `v0.6.28` permite `Selected` en un `Form`;
+  `components v0.6.25/26` los usa. El checkbox sigue siendo el control real:
+  focalizable, anunciado, con su tap target.
+- **Rótulos `Desde`/`Hasta`** en cada fila del patrón, y `Quitar fila` deja de
+  ser un bloque rojo.
+
+Versiones finales verificadas en vivo: `components v0.6.26`, `widget v0.6.28`,
+`date v0.0.7`.

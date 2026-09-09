@@ -50,9 +50,13 @@ func init() {
 		{EN: "Remove row", ES: "Quitar fila"},
 		{EN: "Marked days", ES: "Días marcados"},
 		{EN: "Hours for marked days", ES: "Horario de días marcados"},
+		{EN: "From", ES: "Desde"},
+		{EN: "To", ES: "Hasta"},
 
-		// scheduleeditor's day chips (shortWeekdayKeys) — the short form;
-		// calendarslider renders the long names registered below.
+		// The short weekday form, shared by scheduleeditor's day chips and
+		// calendarslider's column headers — both key off the same canonical
+		// English abbreviations. The long names registered below are for the
+		// slider's spoken date label.
 		{EN: "Sun", ES: "Dom"}, {EN: "Mon", ES: "Lun"},
 		{EN: "Tue", ES: "Mar"}, {EN: "Wed", ES: "Mié"},
 		{EN: "Thu", ES: "Jue"}, {EN: "Fri", ES: "Vie"},
