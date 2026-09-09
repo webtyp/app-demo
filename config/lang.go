@@ -40,13 +40,23 @@ func init() {
 		{EN: "Date", ES: "Fecha"},
 		{EN: "Notes", ES: "Notas"},
 
-		// components/scheduleeditor's weekly grid column headers.
-		{EN: "Day", ES: "Día"},
-		{EN: "Work start", ES: "Entrada"},
-		{EN: "Work end", ES: "Salida"},
-		{EN: "Break start", ES: "Colación desde"},
-		{EN: "Break end", ES: "Colación hasta"},
-		{EN: "No break", ES: "Sin colación"},
+		// components/scheduleeditor's pattern editor: one row per time range
+		// plus its day chips, and the marked-days block. The old weekly-grid
+		// keys (Day / Work start / Break start / …) died with v0.6.23 — the
+		// model is blocks now, and the break is the gap between two rows, not a
+		// field of its own.
+		{EN: "Weekly pattern", ES: "Patrón semanal"},
+		{EN: "Add row", ES: "Agregar fila"},
+		{EN: "Remove row", ES: "Quitar fila"},
+		{EN: "Marked days", ES: "Días marcados"},
+		{EN: "Hours for marked days", ES: "Horario de días marcados"},
+
+		// scheduleeditor's day chips (shortWeekdayKeys) — the short form;
+		// calendarslider renders the long names registered below.
+		{EN: "Sun", ES: "Dom"}, {EN: "Mon", ES: "Lun"},
+		{EN: "Tue", ES: "Mar"}, {EN: "Wed", ES: "Mié"},
+		{EN: "Thu", ES: "Jue"}, {EN: "Fri", ES: "Vie"},
+		{EN: "Sat", ES: "Sáb"},
 
 		// components/calendarslider's month/weekday names (date.MonthName /
 		// date.WeekdayName return these English keys; not yet called by any

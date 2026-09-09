@@ -29,10 +29,6 @@ func (s *ScheduleView) RenderCSS() *css.Stylesheet {
 		Part(PartStaff,
 			style.ControlBox(),
 		).
-		Part(PartSection,
-			style.FontSize(style.TextLg),
-			style.FontWeight(style.WeightBold),
-		).
 		Part(PartBody,
 			style.Stack(style.Space3),
 		).

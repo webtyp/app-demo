@@ -30,20 +30,18 @@ const Icon = svg.Icon("mod-agenda")
 const NameAgenda = widget.Name("agenda")
 
 const (
-	PartHeader  = widget.Part("header")
-	PartStaff   = widget.Part("staff")
-	PartTitle   = widget.Part("title")
-	PartSection = widget.Part("section")
-	PartBody    = widget.Part("body")
+	PartHeader = widget.Part("header")
+	PartStaff  = widget.Part("staff")
+	PartTitle  = widget.Part("title")
+	PartBody   = widget.Part("body")
 )
 
 var (
-	clsRoot    = NameAgenda.Root()
-	clsTitle   = NameAgenda.Class(PartTitle)
-	clsHeader  = NameAgenda.Class(PartHeader)
-	clsStaff   = NameAgenda.Class(PartStaff)
-	clsSection = NameAgenda.Class(PartSection)
-	clsBody    = NameAgenda.Class(PartBody)
+	clsRoot   = NameAgenda.Root()
+	clsTitle  = NameAgenda.Class(PartTitle)
+	clsHeader = NameAgenda.Class(PartHeader)
+	clsStaff  = NameAgenda.Class(PartStaff)
+	clsBody   = NameAgenda.Class(PartBody)
 )
 
 // Module es el módulo demo del editor de agenda.
@@ -255,7 +253,6 @@ func (s *ScheduleView) Render() *Element {
 		Child(Div().Set(clsHeader.AsAttr()).
 			Child(Span().Text("Profesional")).
 			Child(staffpick.Select(s.env.Staff(), s.sel, func(string) { s.reloadEditor() }).Set(clsStaff.AsAttr()))).
-		Child(H2().Set(clsSection.AsAttr()).Text("Plantilla semanal")).
 		Child(Div().Set(clsBody.AsAttr()).BindChildren(s.editor))
 }
 
