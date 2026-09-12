@@ -16,7 +16,7 @@ require (
 	webtyp.com/layout v0.2.34
 	webtyp.com/model v0.1.8
 	webtyp.com/orm v0.12.1
-	webtyp.com/router v0.1.36
+	webtyp.com/router v0.1.37
 	webtyp.com/storage v0.0.7
 	webtyp.com/svg v0.3.9
 	webtyp.com/time v0.5.6
@@ -34,3 +34,9 @@ require (
 	webtyp.com/icons v0.0.7 // indirect
 	webtyp.com/json v0.5.25 // indirect
 )
+
+replace webtyp.com/widget => ../widget
+
+replace webtyp.com/components => ../components
+
+replace webtyp.com/layout => ../layout
