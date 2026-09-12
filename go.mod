@@ -21,7 +21,7 @@ require (
 	webtyp.com/svg v0.3.11
 	webtyp.com/time v0.5.6
 	webtyp.com/unixid v0.2.28
-	webtyp.com/view v0.5.9
+	webtyp.com/view v0.5.10
 	webtyp.com/widget v0.6.29
 )
 
