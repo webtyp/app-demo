@@ -8,7 +8,7 @@ require (
 	github.com/veltylabs/work_schedule v0.1.4
 	webtyp.com/components v0.6.27
 	webtyp.com/css v0.4.22
-	webtyp.com/dom v0.13.14
+	webtyp.com/dom v0.13.15
 	webtyp.com/events v0.0.5
 	webtyp.com/fmt v1.0.0
 	webtyp.com/html v0.0.23
