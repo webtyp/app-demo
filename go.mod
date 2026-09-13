@@ -22,7 +22,7 @@ require (
 	webtyp.com/time v0.5.6
 	webtyp.com/unixid v0.2.28
 	webtyp.com/view v0.5.10
-	webtyp.com/widget v0.6.29
+	webtyp.com/widget v0.6.30
 )
 
 require (
@@ -34,7 +34,5 @@ require (
 	webtyp.com/icons v0.0.7 // indirect
 	webtyp.com/json v0.5.25 // indirect
 )
-
-replace webtyp.com/widget => ../widget
 
 replace webtyp.com/components => ../components
