@@ -30,7 +30,7 @@ require (
 	webtyp.com/date v0.0.7 // indirect
 	webtyp.com/ddl v0.0.15 // indirect
 	webtyp.com/font v0.0.5 // indirect
-	webtyp.com/form v0.4.11 // indirect
+	webtyp.com/form v0.4.13 // indirect
 	webtyp.com/icons v0.0.7 // indirect
 	webtyp.com/json v0.5.25 // indirect
 )
