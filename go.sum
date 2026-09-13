@@ -6,6 +6,8 @@ github.com/veltylabs/work_schedule v0.1.4 h1:3vhOB7U+HaMH+ZXy7VoeTqNnPjgpsRGuOCX
 github.com/veltylabs/work_schedule v0.1.4/go.mod h1:aLqFMqnGd0KQbWowrDQqq0ioAUfhWgV1V7DB7dOh4kk=
 webtyp.com/color v0.1.2 h1:PN2vx9jtlwFsu2juQoaj0GEJMY/ex3fQDcop20V8+ik=
 webtyp.com/color v0.1.2/go.mod h1:p5n4e0KRiPavkkQajtQKoMAU7C+1yx86AZlzMWTJhC8=
+webtyp.com/components v0.6.28 h1:rHmUoMnA8kvbEu27GvRPC0lWZYeBwAX/9sCtdl87acY=
+webtyp.com/components v0.6.28/go.mod h1:FbJm+fSTVoglWgJpFRfIqWYvFVDZ4foW0VhUM4dc5W4=
 webtyp.com/css v0.4.22 h1:d1Wc04mCf83oSfPq3ifrDdQMRumiAFK6F7QfRwQudOc=
 webtyp.com/css v0.4.22/go.mod h1:qbi0OpxKohFtrEzMCFmcM8w1LaLGSd+Nlw+LzLSNZhU=
 webtyp.com/date v0.0.7 h1:b4+4I2BHTGHmZocoOJtQ+poZt3jPaKvvRpmBP1SZ8dY=

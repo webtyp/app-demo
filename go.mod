@@ -6,7 +6,7 @@ require (
 	github.com/veltylabs/appointment_booking v0.1.5
 	github.com/veltylabs/item_catalog v0.3.4
 	github.com/veltylabs/work_schedule v0.1.4
-	webtyp.com/components v0.6.27
+	webtyp.com/components v0.6.28
 	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.16
 	webtyp.com/events v0.0.5
@@ -34,5 +34,3 @@ require (
 	webtyp.com/icons v0.0.7 // indirect
 	webtyp.com/json v0.5.25 // indirect
 )
-
-replace webtyp.com/components => ../components
