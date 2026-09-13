@@ -13,7 +13,7 @@ require (
 	webtyp.com/fmt v1.0.0
 	webtyp.com/html v0.0.23
 	webtyp.com/input v0.0.6
-	webtyp.com/layout v0.2.34
+	webtyp.com/layout v0.2.37
 	webtyp.com/model v0.1.9
 	webtyp.com/orm v0.12.3
 	webtyp.com/router v0.1.37
@@ -38,5 +38,3 @@ require (
 replace webtyp.com/widget => ../widget
 
 replace webtyp.com/components => ../components
-
-replace webtyp.com/layout => ../layout
