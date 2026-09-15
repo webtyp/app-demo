@@ -23,7 +23,7 @@ func Select(staff []config.StaffOption, sel *SignalString, onChange func(id stri
 			el.Child(Option(so.ID, so.Name))
 		}
 	}
-	el.On("change", func(ev Event) {
+	el.OnChange(func(ev Event) {
 		sel.Set(ev.TargetValue())
 		if onChange != nil {
 			onChange(ev.TargetValue())

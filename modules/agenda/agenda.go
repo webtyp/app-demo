@@ -10,6 +10,7 @@ import (
 
 	"webtyp.com/components/scheduleeditor"
 	"webtyp.com/layout/platformd"
+	"webtyp.com/layout/rightpanel"
 	"webtyp.com/svg"
 	"webtyp.com/widget"
 
@@ -32,13 +33,11 @@ const NameAgenda = widget.Name("agenda")
 const (
 	PartHeader = widget.Part("header")
 	PartStaff  = widget.Part("staff")
-	PartTitle  = widget.Part("title")
 	PartBody   = widget.Part("body")
 )
 
 var (
 	clsRoot   = NameAgenda.Root()
-	clsTitle  = NameAgenda.Class(PartTitle)
 	clsHeader = NameAgenda.Class(PartHeader)
 	clsStaff  = NameAgenda.Class(PartStaff)
 	clsBody   = NameAgenda.Class(PartBody)
@@ -168,9 +167,14 @@ func (s *ScheduleView) buildEditor() *scheduleeditor.ScheduleEditor {
 					pending--
 					if pending == 0 {
 						s.notifySave(firstErr)
-						if firstErr == nil {
-							s.reloadEditor()
-						}
+						// Se recarga SIEMPRE, también al fallar. El editor ya
+						// mutó su patrón en memoria al emitir el cambio; si la
+						// escritura se rechaza y no se recarga, la pantalla
+						// queda mostrando un estado que no está guardado en
+						// ninguna parte y el usuario no tiene forma de saberlo.
+						// Recargar desde las ops es lo que hace que lo que se
+						// ve sea siempre lo que está persistido.
+						s.reloadEditor()
 					}
 				})
 			}
@@ -247,13 +251,25 @@ func (s *ScheduleView) notifySave(err error) {
 }
 
 // Render arma el editor completo con el chrome de la vista.
+// Render presta el chasis de rightpanel en vez de fabricar uno propio. El
+// título, el marco de panel y —lo que faltaba— la región que hace scroll son
+// suyos: la vista escribía su propio <h1> y su propio Stack, así que quedaba
+// sin panel, sin scroll (el editor se cortaba abajo) y con un título que no se
+// parecía al de ningún otro módulo. Es el mismo error que arreglar un cap a
+// mano: el consumidor ensambla, no reconstruye.
+//
+// Sin Aside: el ScheduleEditor renderiza sus tres secciones en un solo flujo
+// (patrón, días marcados, excepciones), así que no hay dónde partirlo sin
+// tocar el componente. Va entero en Article.
 func (s *ScheduleView) Render() *Element {
-	return Div().Set(clsRoot.AsAttr()).
-		Child(H1().Set(clsTitle.AsAttr()).Text("Agenda")).
-		Child(Div().Set(clsHeader.AsAttr()).
+	panel := &rightpanel.RightPanel{
+		Title: "Agenda",
+		HeadControls: Div().Set(clsHeader.AsAttr()).
 			Child(Span().Text("Profesional")).
-			Child(staffpick.Select(s.env.Staff(), s.sel, func(string) { s.reloadEditor() }).Set(clsStaff.AsAttr()))).
-		Child(Div().Set(clsBody.AsAttr()).BindChildren(s.editor))
+			Child(staffpick.Select(s.env.Staff(), s.sel, func(string) { s.reloadEditor() }).Set(clsStaff.AsAttr())),
+		Article: Div().Set(clsBody.AsAttr()).BindChildren(s.editor),
+	}
+	return Div().Set(clsRoot.AsAttr()).Child(panel.Render())
 }
 
 // ---------------------------------------------------------------------------
@@ -296,8 +312,27 @@ func unixDay(dateStr string) int64 {
 	return nano / 1000000000
 }
 
-// unixDate convierte segundos desde epoch a "YYYY-MM-DD" (FormatDate espera
-// UnixNano, por eso se escala ×10^9).
+// unixDate convierte segundos desde epoch a "YYYY-MM-DD".
+//
+// Por ISO8601 y no por FormatDate. Las dos funciones parecen el par de
+// unixDay, y no lo son: ParseDate devuelve UTC (así lo documenta su hermana
+// ParseDateTime) mientras FormatDate "applies the timezone offset". Mezclarlas
+// desplaza la fecha por el offset, y con cualquier huso negativo —Santiago es
+// UTC−3— eso es un día entero:
+//
+//	2026-09-08 → ParseDate → 1788825600 → FormatDate → 2026-09-07
+//
+// Una fecha de calendario no tiene huso: el 8 de septiembre es el 8 en todas
+// partes. Así que el viaje de ida y vuelta tiene que hacerse por el par que sí
+// coincide, y FormatISO8601 está documentada como UTC. Los primeros 10
+// caracteres son "YYYY-MM-DD".
+//
+// El par asimétrico ParseDate/FormatDate es una trampa de webtyp/time, no de
+// este módulo; acá solo se elige el par correcto.
 func unixDate(seconds int64) string {
-	return tintime.FormatDate(seconds * 1000000000)
+	iso := tintime.FormatISO8601(seconds * 1000000000)
+	if len(iso) < 10 {
+		return iso
+	}
+	return iso[:10]
 }

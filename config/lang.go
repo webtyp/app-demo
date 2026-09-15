@@ -33,6 +33,21 @@ func init() {
 		{EN: "Closed", ES: "Cerrado"},
 		{EN: "Special hours", ES: "Horario especial"},
 		{EN: "No exceptions", ES: "Sin excepciones"},
+		{EN: "Specific dates", ES: "Fechas específicas"},
+		{EN: "Dates that differ from the weekly pattern", ES: "Fechas que se apartan del patrón semanal"},
+		{EN: "No specific dates yet", ES: "Todavía no hay fechas especiales"},
+		{EN: "Turn on the days you work and set their hours", ES: "Activá los días que trabajás y fijá su horario"},
+		{EN: "Does not work", ES: "No trabaja"},
+		{EN: "Extra day", ES: "Día extra"},
+		{EN: "I do not work that day", ES: "Ese día no atiendo"},
+		{EN: "or work different hours that day", ES: "…o atender en otro horario"},
+		{EN: "Save these hours", ES: "Guardar ese horario"},
+		{EN: "You do not work this weekday", ES: "Ese día de la semana no atendés"},
+		{EN: "Work that day", ES: "Atender ese día"},
+		{EN: "Back to normal hours", ES: "Volver al horario normal"},
+		{EN: "Reason", ES: "Motivo"},
+		{EN: "Add time range", ES: "Agregar horario"},
+		{EN: "Remove time range", ES: "Quitar horario"},
 		{EN: "Blocked", ES: "Bloqueado"},
 		{EN: "Add", ES: "Agregar"},
 		{EN: "Remove", ES: "Quitar"},
@@ -76,6 +91,16 @@ func init() {
 		{EN: "Tuesday", ES: "Martes"}, {EN: "Wednesday", ES: "Miércoles"},
 		{EN: "Thursday", ES: "Jueves"}, {EN: "Friday", ES: "Viernes"},
 		{EN: "Saturday", ES: "Sábado"},
+
+		// components/calendarslider's own chrome: the strip's accessible
+		// name, the today marker, the ‹ › labels, the collapsed field's
+		// placeholder and the day's occupancy suffix.
+		{EN: "Calendar", ES: "Calendario"},
+		{EN: "Today", ES: "Hoy"},
+		{EN: "Previous month", ES: "Mes anterior"},
+		{EN: "Next month", ES: "Mes siguiente"},
+		{EN: "Select date", ES: "Elegir fecha"},
+		{EN: "occupied", ES: "ocupado"},
 	})
 
 	// The activation, not just the dictionary — without this, fmt/lang's own
