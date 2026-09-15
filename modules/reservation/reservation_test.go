@@ -8,6 +8,7 @@ import (
 
 	"webtyp.com/dom"
 	"webtyp.com/events"
+	"webtyp.com/model"
 	tintime "webtyp.com/time"
 
 	ab "github.com/veltylabs/appointment_booking"
@@ -78,18 +79,20 @@ func TestList_ScopedByStaff(t *testing.T) {
 	store := &reservationStore{env: env, staff: dom.NewString("")}
 
 	store.staffId = ""
-	rows, err := store.List()
-	if err != nil {
-		t.Fatalf("List with no staff: %v", err)
+	var rows []model.Model
+	var lerr error
+	store.List(func(r []model.Model, err error) { rows = r; lerr = err })
+	if lerr != nil {
+		t.Fatalf("List with no staff: %v", lerr)
 	}
 	if len(rows) != 0 {
 		t.Fatalf("expected empty list without staff, got %d", len(rows))
 	}
 
 	store.staffId = "staff-natasha"
-	rows, err = store.List()
-	if err != nil {
-		t.Fatalf("List: %v", err)
+	store.List(func(r []model.Model, err error) { rows = r; lerr = err })
+	if lerr != nil {
+		t.Fatalf("List: %v", lerr)
 	}
 	if len(rows) != 3 {
 		t.Fatalf("expected 3 reservations for Natasha, got %d", len(rows))
@@ -111,14 +114,15 @@ func TestCreate_GoesThroughRealOp(t *testing.T) {
 	env := testEnv(t)
 	store := &reservationStore{env: env, staff: dom.NewString("staff-natasha"), staffId: "staff-natasha"}
 
-	err := store.Save(&Reservation{
+	var serr error
+	store.Save([]model.Model{&Reservation{
 		PatientRun:  "102030405",
 		PatientName: "Nuevo Paciente",
 		Day:         "2026-09-14", // lunes — Natasha agenda Lun–Vie
 		Hour:        "15:00",
-	})
-	if err != nil {
-		t.Fatalf("Save: %v", err)
+	}}, func(err error) { serr = err })
+	if serr != nil {
+		t.Fatalf("Save: %v", serr)
 	}
 
 	caller := env.Caller()
@@ -246,14 +250,15 @@ func TestReservationCreated_RemovesFreeSlot(t *testing.T) {
 	}
 
 	// Reservar las 14:00.
-	err := store.Save(&Reservation{
+	var serr error
+	store.Save([]model.Model{&Reservation{
 		PatientRun:  "200000001",
 		PatientName: "Paciente de las dos",
 		Day:         "2026-09-14",
 		Hour:        "14:00",
-	})
-	if err != nil {
-		t.Fatalf("Save: %v", err)
+	}}, func(err error) { serr = err })
+	if serr != nil {
+		t.Fatalf("Save: %v", serr)
 	}
 
 	after := store.freeSlotsForDay("2026-09-14")
@@ -267,17 +272,20 @@ func TestCreate_SlotTaken(t *testing.T) {
 	env := testEnv(t)
 	store := &reservationStore{env: env, staff: dom.NewString("staff-natasha"), staffId: "staff-natasha"}
 
-	err := store.Save(&Reservation{
+	var serr error
+	store.Save([]model.Model{&Reservation{
 		PatientRun:  "0001",
 		PatientName: "Clon Burn",
 		Day:         "2026-09-10",
 		Hour:        "09:00",
-	})
-	if err == nil {
+	}}, func(err error) { serr = err })
+	if serr == nil {
 		t.Fatal("expected an error for an occupied slot")
 	}
 
-	rows, lerr := store.List()
+	var rows []model.Model
+	var lerr error
+	store.List(func(r []model.Model, err error) { rows = r; lerr = err })
 	if lerr != nil {
 		t.Fatalf("List: %v", lerr)
 	}

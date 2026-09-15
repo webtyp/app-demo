@@ -56,27 +56,31 @@ func (p requirePatient) Filter(term string) []view.Item {
 // extra ones a concrete value happens to also satisfy — view.New's return
 // value here implements all three because visitStore implements view.Saver,
 // view.Updater and view.Deleter, so the fallback errors are unreachable
-// in practice, not a real degraded mode. The var _ lines below are the
-// compile-time guard that each forward is present.
-func (p requirePatient) Save(recs ...model.Model) error {
+// in practice, not a real degraded mode. Each forward passes the done callback
+// straight through — the outcome travels back to crudview asynchronously. The
+// var _ lines below are the compile-time guard that each forward is present.
+func (p requirePatient) Save(recs []model.Model, done func(error)) {
 	if s, ok := p.Presenter.(view.Saver); ok {
-		return s.Save(recs...)
+		s.Save(recs, done)
+		return
 	}
-	return Errf("requirePatient: underlying presenter cannot save")
+	done(Errf("requirePatient: underlying presenter cannot save"))
 }
 
-func (p requirePatient) Update(ids []string, rec model.Model, fields []string) error {
+func (p requirePatient) Update(ids []string, rec model.Model, fields []string, done func(error)) {
 	if u, ok := p.Presenter.(view.Updater); ok {
-		return u.Update(ids, rec, fields)
+		u.Update(ids, rec, fields, done)
+		return
 	}
-	return Errf("requirePatient: underlying presenter cannot update")
+	done(Errf("requirePatient: underlying presenter cannot update"))
 }
 
-func (p requirePatient) Delete(ids ...string) error {
+func (p requirePatient) Delete(ids []string, done func(error)) {
 	if d, ok := p.Presenter.(view.Deleter); ok {
-		return d.Delete(ids...)
+		d.Delete(ids, done)
+		return
 	}
-	return Errf("requirePatient: underlying presenter cannot delete")
+	done(Errf("requirePatient: underlying presenter cannot delete"))
 }
 
 var _ view.Presenter = requirePatient{}

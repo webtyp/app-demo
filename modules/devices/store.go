@@ -44,16 +44,19 @@ func newSeededDeviceDB() *orm.DB {
 
 // deviceStore is the backend of the demo: an orm.DB over storage/mem,
 // speaking view's domain seam directly. No operation names, no envelopes.
+// Every method delivers its outcome through done — view's async contract —
+// never by blocking.
 type deviceStore struct{ db *orm.DB }
 
-func (s *deviceStore) List() ([]model.Model, error) {
+func (s *deviceStore) List(done func([]model.Model, error)) {
 	var rows []*Device
 	err := s.db.Query(&Device{}).ReadAll(
 		func() model.Model { return &Device{} },
 		func(m model.Model) { rows = append(rows, m.(*Device)) },
 	)
 	if err != nil {
-		return nil, err
+		done(nil, err)
+		return
 	}
 	// Newest first: mem has no timestamp/sequence column, so this just
 	// reverses creation order — the same order Create() appended in.
@@ -61,48 +64,61 @@ func (s *deviceStore) List() ([]model.Model, error) {
 	for i := len(rows) - 1; i >= 0; i-- {
 		out = append(out, rows[i])
 	}
-	return out, nil
+	done(out, nil)
 }
 
-func (s *deviceStore) Save(recs ...model.Model) error {
+func (s *deviceStore) Save(recs []model.Model, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	if len(recs) == 0 {
-		return Errf("deviceStore: save: empty records")
+		done(Errf("deviceStore: save: empty records"))
+		return
 	}
 	for _, m := range recs {
 		d := m.(*Device)
 		if findErr := s.db.Query(&Device{}).Where("id").Eq(d.Id).ReadOne(); findErr != nil {
 			if err := s.db.Create(d); err != nil { // no existing row with this id — new record
-				return err
+				done(err)
+				return
 			}
 		} else {
 			if err := s.db.Update(d, storage.Eq("id", d.Id)); err != nil {
-				return err
+				done(err)
+				return
 			}
 		}
 	}
-	return nil
+	done(nil)
 }
 
-func (s *deviceStore) Update(ids []string, rec model.Model, fields []string) error {
+func (s *deviceStore) Update(ids []string, rec model.Model, fields []string, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	switch {
 	case len(ids) == 0:
-		return Errf("deviceStore: update: empty ids")
+		done(Errf("deviceStore: update: empty ids"))
 	case len(fields) == 0:
-		return Errf("deviceStore: update: empty fields")
+		done(Errf("deviceStore: update: empty fields"))
 	case model.IsNil(rec):
-		return Errf("deviceStore: update: missing record")
+		done(Errf("deviceStore: update: missing record"))
 	default:
-		return s.db.UpdateFields(rec, fields, storage.In("id", anyIDs(ids)))
+		done(s.db.UpdateFields(rec, fields, storage.In("id", anyIDs(ids))))
 	}
 }
 
-func (s *deviceStore) Delete(ids ...string) error {
+func (s *deviceStore) Delete(ids []string, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	if len(ids) == 0 {
-		return Errf("deviceStore: delete: empty ids")
+		done(Errf("deviceStore: delete: empty ids"))
+		return
 	}
 	// One statement for the whole batch: atomic by construction, no loop
 	// that could leave a half-applied delete behind.
-	return s.db.Delete(&Device{}, storage.In("id", anyIDs(ids)))
+	done(s.db.Delete(&Device{}, storage.In("id", anyIDs(ids))))
 }
 
 func anyIDs(ids []string) []any {

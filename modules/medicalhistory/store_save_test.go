@@ -3,6 +3,7 @@ package medicalhistory
 import (
 	"testing"
 
+	"webtyp.com/model"
 	"webtyp.com/view"
 )
 
@@ -13,20 +14,25 @@ func TestMemCallerSaveThroughThePresenter(t *testing.T) {
 	pres := requirePatient{view.New(&visitStore{db: db}, &Visit{}, view.WithTitle("t"))}
 
 	var saver view.Saver = pres
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("reload failed: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("reload failed: %v", rerr)
 	}
 
-	if err := saver.Save(&Visit{Id: "v9", Patient: "Ana Lima", Doctor: "dr. X", Date: "2026-09-01", Reason: "Control", Diagnosis: ""}); err != nil {
-		t.Fatalf("create-via-save failed: %v", err)
+	var serr error
+	saver.Save([]model.Model{&Visit{Id: "v9", Patient: "Ana Lima", Doctor: "dr. X", Date: "2026-09-01", Reason: "Control", Diagnosis: ""}}, func(err error) { serr = err })
+	if serr != nil {
+		t.Fatalf("create-via-save failed: %v", serr)
 	}
 	got := readAll(t, db)
 	if got["v9"] == nil || got["v9"].Patient != "Ana Lima" {
 		t.Errorf("new record not persisted: %+v", got["v9"])
 	}
 
-	if err := saver.Save(&Visit{Id: "v1", Patient: "Juan Pérez", Doctor: "dra. Nueva", Date: "2026-07-20", Reason: "Control", Diagnosis: "Actualizado"}); err != nil {
-		t.Fatalf("update-via-save failed: %v", err)
+	saver.Save([]model.Model{&Visit{Id: "v1", Patient: "Juan Pérez", Doctor: "dra. Nueva", Date: "2026-07-20", Reason: "Control", Diagnosis: "Actualizado"}}, func(err error) { serr = err })
+	if serr != nil {
+		t.Fatalf("update-via-save failed: %v", serr)
 	}
 	got = readAll(t, db)
 	if got["v1"].Doctor != "dra. Nueva" || got["v1"].Diagnosis != "Actualizado" {

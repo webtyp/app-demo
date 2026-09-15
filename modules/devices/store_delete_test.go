@@ -18,12 +18,16 @@ func TestMemCallerBulkDeleteRemovesOnlyMarked(t *testing.T) {
 	if !ok {
 		t.Fatal("presenter must implement view.Deleter")
 	}
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("reload failed: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("reload failed: %v", rerr)
 	}
 
-	if err := deleter.Delete("10", "11"); err != nil {
-		t.Fatalf("bulk delete failed: %v", err)
+	var derr error
+	deleter.Delete([]string{"10", "11"}, func(err error) { derr = err })
+	if derr != nil {
+		t.Fatalf("bulk delete failed: %v", derr)
 	}
 
 	var ids []string
@@ -44,8 +48,9 @@ func TestMemCallerBulkDeleteRemovesOnlyMarked(t *testing.T) {
 	}
 
 	// N=1 ships the same shape: a single delete is a batch of one.
-	if err := deleter.Delete("12"); err != nil {
-		t.Fatalf("single delete failed: %v", err)
+	deleter.Delete([]string{"12"}, func(err error) { derr = err })
+	if derr != nil {
+		t.Fatalf("single delete failed: %v", derr)
 	}
 	if findErr := db.Query(&Device{}).Where("id").Eq("12").ReadOne(); findErr == nil {
 		t.Error("id 12 must be gone after the single delete")

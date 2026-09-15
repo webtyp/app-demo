@@ -49,16 +49,19 @@ func newSeededVisitDB() *orm.DB {
 
 // visitStore is the backend of the demo: an orm.DB over storage/mem,
 // speaking view's domain seam directly. No operation names, no envelopes.
+// Every method delivers its outcome through done — view's async contract —
+// never by blocking.
 type visitStore struct{ db *orm.DB }
 
-func (s *visitStore) List() ([]model.Model, error) {
+func (s *visitStore) List(done func([]model.Model, error)) {
 	var rows []*Visit
 	err := s.db.Query(&Visit{}).ReadAll(
 		func() model.Model { return &Visit{} },
 		func(m model.Model) { rows = append(rows, m.(*Visit)) },
 	)
 	if err != nil {
-		return nil, err
+		done(nil, err)
+		return
 	}
 	// Newest first: mem has no timestamp/sequence column, so this just
 	// reverses creation order — the same order Create() appended in.
@@ -66,48 +69,61 @@ func (s *visitStore) List() ([]model.Model, error) {
 	for i := len(rows) - 1; i >= 0; i-- {
 		out = append(out, rows[i])
 	}
-	return out, nil
+	done(out, nil)
 }
 
-func (s *visitStore) Save(recs ...model.Model) error {
+func (s *visitStore) Save(recs []model.Model, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	if len(recs) == 0 {
-		return Errf("visitStore: save: empty records")
+		done(Errf("visitStore: save: empty records"))
+		return
 	}
 	for _, m := range recs {
 		v := m.(*Visit)
 		if findErr := s.db.Query(&Visit{}).Where("id").Eq(v.Id).ReadOne(); findErr != nil {
 			if err := s.db.Create(v); err != nil { // no existing row with this id — new record
-				return err
+				done(err)
+				return
 			}
 		} else {
 			if err := s.db.Update(v, storage.Eq("id", v.Id)); err != nil {
-				return err
+				done(err)
+				return
 			}
 		}
 	}
-	return nil
+	done(nil)
 }
 
-func (s *visitStore) Update(ids []string, rec model.Model, fields []string) error {
+func (s *visitStore) Update(ids []string, rec model.Model, fields []string, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	switch {
 	case len(ids) == 0:
-		return Errf("visitStore: update: empty ids")
+		done(Errf("visitStore: update: empty ids"))
 	case len(fields) == 0:
-		return Errf("visitStore: update: empty fields")
+		done(Errf("visitStore: update: empty fields"))
 	case model.IsNil(rec):
-		return Errf("visitStore: update: missing record")
+		done(Errf("visitStore: update: missing record"))
 	default:
-		return s.db.UpdateFields(rec, fields, storage.In("id", anyIDs(ids)))
+		done(s.db.UpdateFields(rec, fields, storage.In("id", anyIDs(ids))))
 	}
 }
 
-func (s *visitStore) Delete(ids ...string) error {
+func (s *visitStore) Delete(ids []string, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	if len(ids) == 0 {
-		return Errf("visitStore: delete: empty ids")
+		done(Errf("visitStore: delete: empty ids"))
+		return
 	}
 	// One statement for the whole batch: atomic by construction, no loop
 	// that could leave a half-applied delete behind.
-	return s.db.Delete(&Visit{}, storage.In("id", anyIDs(ids)))
+	done(s.db.Delete(&Visit{}, storage.In("id", anyIDs(ids))))
 }
 
 func anyIDs(ids []string) []any {

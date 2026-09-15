@@ -18,13 +18,17 @@ func TestMemCallerBulkUpdatePatchesOnlyNamedFields(t *testing.T) {
 	if !ok {
 		t.Fatal("presenter must implement view.Updater")
 	}
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("reload failed: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("reload failed: %v", rerr)
 	}
 
 	// Only "name" is in the field set — Ip must survive on every matched row.
-	if err := updater.Update([]string{"10", "11"}, &Device{Name: "PATCHED"}, []string{"name"}); err != nil {
-		t.Fatalf("bulk update failed: %v", err)
+	var uerr error
+	updater.Update([]string{"10", "11"}, &Device{Name: "PATCHED"}, []string{"name"}, func(err error) { uerr = err })
+	if uerr != nil {
+		t.Fatalf("bulk update failed: %v", uerr)
 	}
 
 	got := readAll(t, db)
@@ -41,8 +45,9 @@ func TestMemCallerBulkUpdatePatchesOnlyNamedFields(t *testing.T) {
 	}
 
 	// N=1 ships the same shape: a single-record bulk edit is a batch of one.
-	if err := updater.Update([]string{"12"}, &Device{Ip: "10.0.0.9"}, []string{"ip"}); err != nil {
-		t.Fatalf("single update failed: %v", err)
+	updater.Update([]string{"12"}, &Device{Ip: "10.0.0.9"}, []string{"ip"}, func(err error) { uerr = err })
+	if uerr != nil {
+		t.Fatalf("single update failed: %v", uerr)
 	}
 	got = readAll(t, db)
 	if got["12"].Ip != "10.0.0.9" {
@@ -59,10 +64,14 @@ func TestMemCallerBulkUpdateRejectsEmptyFields(t *testing.T) {
 	db := newSeededDeviceDB()
 	pres := view.New(&deviceStore{db: db}, &Device{}, view.WithTitle("t"))
 	updater := pres.(view.Updater)
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("reload failed: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("reload failed: %v", rerr)
 	}
-	if err := updater.Update([]string{"10"}, &Device{Name: "X"}, nil); err == nil {
+	var uerr error
+	updater.Update([]string{"10"}, &Device{Name: "X"}, nil, func(err error) { uerr = err })
+	if uerr == nil {
 		t.Error("expected an error for an empty field set")
 	}
 }

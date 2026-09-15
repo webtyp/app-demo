@@ -88,22 +88,27 @@ func (s *ScheduleList) Init(_ Ctx) {
 }
 
 // reload re-llena la lista del profesional elegido con las filas de
-// workschedule.NewView (lista read-only sobre sus tablas).
+// workschedule.NewView (lista read-only sobre sus tablas). El resultado llega
+// por el done callback del Presenter — se pinta desde adentro, nunca bloqueando.
 func (s *ScheduleList) reload() {
 	wsStaffID := s.env.WorkScheduleStaffID(s.sel.Get())
-	nodes := []*Element{}
-	if wsStaffID != 0 {
-		pres := ws.NewView(s.env.Caller(), wsStaffID)
-		if err := pres.Reload(); err == nil {
+	if wsStaffID == 0 {
+		s.items.Set([]*Element{Li().Text("Sin horario registrado")})
+		return
+	}
+	pres := ws.NewView(s.env.Caller(), wsStaffID)
+	pres.Reload(func(err error) {
+		nodes := []*Element{}
+		if err == nil {
 			for _, it := range pres.Items() {
 				nodes = append(nodes, Li().Text(it.Label+": "+it.Description))
 			}
 		}
-	}
-	if len(nodes) == 0 {
-		nodes = append(nodes, Li().Text("Sin horario registrado"))
-	}
-	s.items.Set(nodes)
+		if len(nodes) == 0 {
+			nodes = append(nodes, Li().Text("Sin horario registrado"))
+		}
+		s.items.Set(nodes)
+	})
 }
 
 // Render arma la vista: encabezado, picker y la lista del horario legado.

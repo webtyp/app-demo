@@ -18,8 +18,10 @@ import (
 func TestCatalog_ListsSeededItems(t *testing.T) {
 	env := config.New()
 	pres := itemcatalog.NewView(env.Caller())
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("Reload: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("Reload: %v", rerr)
 	}
 	items := pres.Items()
 	if len(items) < 4 {
@@ -40,8 +42,10 @@ func TestCatalog_ListsSeededItems(t *testing.T) {
 func TestSpecialties_ListsSeeded(t *testing.T) {
 	env := config.New()
 	pres := itemcatalog.NewSpecialtyView(env.Caller())
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("Reload: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("Reload: %v", rerr)
 	}
 	items := pres.Items()
 	if len(items) < 4 {
@@ -109,8 +113,10 @@ func TestCreateItem_GoesThroughRealOp(t *testing.T) {
 	}
 
 	pres := itemcatalog.NewView(caller)
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("Reload: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("Reload: %v", rerr)
 	}
 	found := false
 	for _, it := range pres.Items() {

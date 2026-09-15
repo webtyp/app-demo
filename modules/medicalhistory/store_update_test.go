@@ -16,13 +16,17 @@ func TestMemCallerBulkUpdatePatchesOnlyNamedFields(t *testing.T) {
 	pres := requirePatient{view.New(&visitStore{db: db}, &Visit{}, view.WithTitle("t"))}
 
 	var updater view.Updater = pres // requirePatient satisfies it via the forward
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("reload failed: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("reload failed: %v", rerr)
 	}
 
 	// Patch "reason" on two visits — Diagnosis (a different column) must survive.
-	if err := updater.Update([]string{"v1", "v2"}, &Visit{Reason: "Revisión"}, []string{"reason"}); err != nil {
-		t.Fatalf("bulk update failed: %v", err)
+	var uerr error
+	updater.Update([]string{"v1", "v2"}, &Visit{Reason: "Revisión"}, []string{"reason"}, func(err error) { uerr = err })
+	if uerr != nil {
+		t.Fatalf("bulk update failed: %v", uerr)
 	}
 	got := readAll(t, db)
 	for _, id := range []string{"v1", "v2"} {
@@ -38,8 +42,9 @@ func TestMemCallerBulkUpdatePatchesOnlyNamedFields(t *testing.T) {
 	}
 
 	// N=1.
-	if err := updater.Update([]string{"v3"}, &Visit{Doctor: "dr. House"}, []string{"doctor"}); err != nil {
-		t.Fatalf("single update failed: %v", err)
+	updater.Update([]string{"v3"}, &Visit{Doctor: "dr. House"}, []string{"doctor"}, func(err error) { uerr = err })
+	if uerr != nil {
+		t.Fatalf("single update failed: %v", uerr)
 	}
 	got = readAll(t, db)
 	if got["v3"].Doctor != "dr. House" {

@@ -3,6 +3,7 @@ package devices
 import (
 	"testing"
 
+	"webtyp.com/model"
 	"webtyp.com/view"
 )
 
@@ -16,13 +17,17 @@ func TestMemCallerSaveThroughThePresenter(t *testing.T) {
 	if !ok {
 		t.Fatal("presenter must implement view.Saver")
 	}
-	if err := pres.Reload(); err != nil {
-		t.Fatalf("reload failed: %v", err)
+	var rerr error
+	pres.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("reload failed: %v", rerr)
 	}
 
 	// A brand-new record lands.
-	if err := saver.Save(&Device{Id: "99", Name: "Nuevo", Ip: "10.0.0.99"}); err != nil {
-		t.Fatalf("create-via-save failed: %v", err)
+	var serr error
+	saver.Save([]model.Model{&Device{Id: "99", Name: "Nuevo", Ip: "10.0.0.99"}}, func(err error) { serr = err })
+	if serr != nil {
+		t.Fatalf("create-via-save failed: %v", serr)
 	}
 	got := readAll(t, db)
 	if got["99"] == nil || got["99"].Name != "Nuevo" {
@@ -30,8 +35,9 @@ func TestMemCallerSaveThroughThePresenter(t *testing.T) {
 	}
 
 	// Saving an existing id replaces the whole record.
-	if err := saver.Save(&Device{Id: "10", Name: "Renombrado", Ip: "10.0.0.10"}); err != nil {
-		t.Fatalf("update-via-save failed: %v", err)
+	saver.Save([]model.Model{&Device{Id: "10", Name: "Renombrado", Ip: "10.0.0.10"}}, func(err error) { serr = err })
+	if serr != nil {
+		t.Fatalf("update-via-save failed: %v", serr)
 	}
 	got = readAll(t, db)
 	if got["10"].Name != "Renombrado" || got["10"].Ip != "10.0.0.10" {

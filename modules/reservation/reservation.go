@@ -122,7 +122,7 @@ func (v *reservationView) refresh() {
 		v.target.FreeSlots = v.store.freeSlotsForDay(v.currentDay())
 	}
 	if v.cv != nil {
-		_ = v.cv.Reload()
+		v.cv.Reload(nil)
 	}
 }
 
@@ -300,7 +300,7 @@ func (c *reservationContext) Render() *Element {
 			area.Child(Option(sp, specialtyLabel(sp)))
 		}
 	}
-	area.On("change", func(ev Event) {
+	area.OnChange(func(ev Event) {
 		c.area.Set(ev.TargetValue())
 		c.staff.Set("") // el médico anterior puede no pertenecer al área nueva
 		c.rebuildStaffOptions()
@@ -308,7 +308,7 @@ func (c *reservationContext) Render() *Element {
 
 	staff := NewElement("select").Attr("name", "reservation-staff").
 		BindChildren(c.staffNode)
-	staff.On("change", func(ev Event) {
+	staff.OnChange(func(ev Event) {
 		c.staff.Set(ev.TargetValue())
 		if c.onStaffChange != nil {
 			c.onStaffChange(c.staff.Get())
@@ -358,7 +358,8 @@ func specialtyLabel(slug string) string {
 
 // reservationStore es el lister/saver a medida: mantiene el record local del
 // formulario, pero lista y crea contra las ops reales de appointment_booking
-// vía config.Caller().
+// vía config.Caller(). Cada método entrega su resultado por done — el contrato
+// asíncrono de view — nunca bloquea esperando la respuesta del transporte.
 type reservationStore struct {
 	env *config.Env
 	// staff apunta al signal del Context: el scope lo gobierna el médico
@@ -368,50 +369,66 @@ type reservationStore struct {
 	staffId string
 }
 
-func (s *reservationStore) List() ([]model.Model, error) {
+func (s *reservationStore) List(done func([]model.Model, error)) {
 	if s.staffId == "" {
 		// Sin médico scopeado no hay qué listar (mismo modelo que
 		// medicalhistory sin paciente).
-		return nil, nil
+		done(nil, nil)
+		return
 	}
 	from := unixDay("2026-01-01")
 	to := unixDay("2026-12-31")
 	out := &ab.ReservationList{}
-	var callErr error
 	s.env.Caller().Call(
 		ab.OpListReservationsByStaff,
 		&ab.ListReservationsByStaffArgs{TenantId: s.env.TenantID(), StaffId: s.staffId, From: from, To: to},
 		out,
-		func(err error) { callErr = err },
+		func(err error) {
+			if err != nil {
+				done(nil, err)
+				return
+			}
+			rows := make([]model.Model, 0, out.Len())
+			for i := 0; i < out.Len(); i++ {
+				rows = append(rows, toLocal(out.At(i).(*ab.Reservation)))
+			}
+			done(rows, nil)
+		},
 	)
-	if callErr != nil {
-		return nil, callErr
-	}
-	rows := make([]model.Model, 0, out.Len())
-	for i := 0; i < out.Len(); i++ {
-		rows = append(rows, toLocal(out.At(i).(*ab.Reservation)))
-	}
-	return rows, nil
 }
 
-func (s *reservationStore) Save(recs ...model.Model) error {
+// Save crea cada reserva en orden, encadenada por el callback del transporte —
+// nunca bloquea (ver view.Saver). Un fallo en el registro i aborta el resto y
+// viaja por done.
+func (s *reservationStore) Save(recs []model.Model, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
 	if len(recs) == 0 {
-		return Errf("reservationStore: save: empty records")
+		done(Errf("reservationStore: save: empty records"))
+		return
 	}
 	if s.staffId == "" {
-		return Errf("elige un médico para reservar")
+		done(Errf("elige un médico para reservar"))
+		return
 	}
 	escID := s.env.ESCForStaff(s.staffId)
 	if escID == "" {
-		return Errf("no hay servicio configurado para este profesional en la demo")
+		done(Errf("no hay servicio configurado para este profesional en la demo"))
+		return
 	}
-	for _, m := range recs {
-		r := m.(*Reservation)
+	var create func(i int)
+	create = func(i int) {
+		if i == len(recs) {
+			done(nil)
+			return
+		}
+		r := recs[i].(*Reservation)
 		slotUTC := slotStartUTC(r.Day, r.Hour)
 		if slotUTC == 0 {
-			return Errf("faltan día y hora para la reserva")
+			done(Errf("faltan día y hora para la reserva"))
+			return
 		}
-		var callErr error
 		s.env.Caller().Call(
 			ab.OpCreateReservation,
 			&ab.CreateReservationArgs{
@@ -423,24 +440,32 @@ func (s *reservationStore) Save(recs ...model.Model) error {
 				Notes:                   r.PatientName,
 			},
 			nil,
-			func(err error) { callErr = err },
+			func(err error) {
+				if err != nil {
+					done(err)
+					return
+				}
+				create(i + 1)
+			},
 		)
-		if callErr != nil {
-			return callErr
-		}
 	}
-	return nil
+	create(0)
 }
 
 // Deletes/Updates: las reservas solo mutan por transiciones FSM-gated en
-// appointment_booking; la demo no expone borrado directo ni bulk-edit. El
-// Presenter no declara estas capacidades, así que crudview no pinta los botones.
-func (s *reservationStore) Delete(ids ...string) error {
-	return Errf("reservationStore: las reservas no se eliminan en la demo")
+// appointment_booking; la demo no expone borrado directo ni bulk-edit.
+func (s *reservationStore) Delete(ids []string, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
+	done(Errf("reservationStore: las reservas no se eliminan en la demo"))
 }
 
-func (s *reservationStore) Update(ids []string, rec model.Model, fields []string) error {
-	return Errf("reservationStore: las reservas no se editan directo en la demo")
+func (s *reservationStore) Update(ids []string, rec model.Model, fields []string, done func(error)) {
+	if done == nil {
+		done = func(error) {}
+	}
+	done(Errf("reservationStore: las reservas no se editan directo en la demo"))
 }
 
 // toLocal convierte la reserva del módulo a la forma local del formulario.
@@ -557,23 +582,27 @@ func (p byDay) Filter(term string) []view.Item {
 
 // Save/Update/Delete delegan las capacidades al Presenter subyacente: view
 // re-expone las del lister, y crudview las lee desde byDay (el tipo que monta).
-func (p byDay) Save(recs ...model.Model) error {
+// Cada forward pasa el done callback tal cual — el resultado vuelve asíncrono.
+func (p byDay) Save(recs []model.Model, done func(error)) {
 	if s, ok := p.Presenter.(view.Saver); ok {
-		return s.Save(recs...)
+		s.Save(recs, done)
+		return
 	}
-	return Errf("byDay: underlying presenter cannot save")
+	done(Errf("byDay: underlying presenter cannot save"))
 }
 
-func (p byDay) Update(ids []string, rec model.Model, fields []string) error {
+func (p byDay) Update(ids []string, rec model.Model, fields []string, done func(error)) {
 	if u, ok := p.Presenter.(view.Updater); ok {
-		return u.Update(ids, rec, fields)
+		u.Update(ids, rec, fields, done)
+		return
 	}
-	return Errf("byDay: underlying presenter cannot update")
+	done(Errf("byDay: underlying presenter cannot update"))
 }
 
-func (p byDay) Delete(ids ...string) error {
+func (p byDay) Delete(ids []string, done func(error)) {
 	if d, ok := p.Presenter.(view.Deleter); ok {
-		return d.Delete(ids...)
+		d.Delete(ids, done)
+		return
 	}
-	return Errf("byDay: underlying presenter cannot delete")
+	done(Errf("byDay: underlying presenter cannot delete"))
 }
