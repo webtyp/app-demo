@@ -13,7 +13,7 @@ require (
 	webtyp.com/fmt v1.0.0
 	webtyp.com/html v0.0.24
 	webtyp.com/input v0.0.9
-	webtyp.com/layout v0.2.46
+	webtyp.com/layout v0.2.47
 	webtyp.com/model v0.1.9
 	webtyp.com/orm v0.12.4
 	webtyp.com/router v0.1.37
