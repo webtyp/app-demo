@@ -6,7 +6,7 @@ require (
 	github.com/veltylabs/appointment_booking v0.1.13
 	github.com/veltylabs/item_catalog v0.3.8
 	github.com/veltylabs/work_schedule v0.1.6
-	webtyp.com/components v0.6.33
+	webtyp.com/components v0.6.34
 	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.17
 	webtyp.com/events v0.0.5
