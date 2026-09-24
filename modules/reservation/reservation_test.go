@@ -129,7 +129,7 @@ func TestCreate_GoesThroughRealOp(t *testing.T) {
 	out := &ab.ReservationList{}
 	var callErr error
 	caller.Call(
-		ab.OpListReservationsByStaff,
+		ab.ModelName + "." + ab.OpListReservationsByStaff,
 		&ab.ListReservationsByStaffArgs{TenantId: env.TenantID(), StaffId: "staff-natasha", From: 0, To: 4102444800},
 		out,
 		func(e error) { callErr = e },

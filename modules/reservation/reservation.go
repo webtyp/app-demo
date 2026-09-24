@@ -380,7 +380,7 @@ func (s *reservationStore) List(done func([]model.Model, error)) {
 	to := unixDay("2026-12-31")
 	out := &ab.ReservationList{}
 	s.env.Caller().Call(
-		ab.OpListReservationsByStaff,
+		ab.ModelName + "." + ab.OpListReservationsByStaff,
 		&ab.ListReservationsByStaffArgs{TenantId: s.env.TenantID(), StaffId: s.staffId, From: from, To: to},
 		out,
 		func(err error) {
@@ -430,7 +430,7 @@ func (s *reservationStore) Save(recs []model.Model, done func(error)) {
 			return
 		}
 		s.env.Caller().Call(
-			ab.OpCreateReservation,
+			ab.ModelName + "." + ab.OpCreateReservation,
 			&ab.CreateReservationArgs{
 				TenantId:                s.env.TenantID(),
 				ClientId:                r.PatientRun,
@@ -438,6 +438,9 @@ func (s *reservationStore) Save(recs []model.Model, done func(error)) {
 				EmployeeServiceConfigId: escID,
 				SlotStartUtc:            slotUTC,
 				Notes:                   r.PatientName,
+				// La reserva nace en el mostrador: la crea el personal (el
+				// módulo exige Origin desde v0.1.13).
+				Origin: ab.OriginCounter,
 			},
 			nil,
 			func(err error) {
@@ -534,7 +537,7 @@ func (s *reservationStore) freeSlotsForDay(day string) []string {
 	out := &ab.TimeSlotList{}
 	var callErr error
 	s.env.Caller().Call(
-		ab.OpListAvailability,
+		ab.ModelName + "." + ab.OpListAvailability,
 		&ab.ListAvailabilityArgs{
 			TenantId: s.env.TenantID(),
 			StaffId:  s.staffId,

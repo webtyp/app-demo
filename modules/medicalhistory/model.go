@@ -16,7 +16,7 @@ var visitDef = model.Definition{
 		{Name: "id", Type: input.Text(), NotNull: true, DB: &model.FieldDB{PK: true}},
 		{Name: "patient", Type: input.Text(), NotNull: true},
 		{Name: "doctor", Type: input.Text(), NotNull: true},
-		{Name: "date", Type: input.Text(), NotNull: true},
+		{Name: "date", Type: input.Date(), NotNull: true},
 		{Name: "reason", Type: input.Text(), NotNull: true},
 		{Name: "diagnosis", Type: input.Text()},
 	},

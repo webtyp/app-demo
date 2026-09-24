@@ -10,12 +10,14 @@ var reservationDef = model.Definition{
 	Name: "reservation",
 	Fields: model.Fields{
 		{Name: "id", Type: input.Text(), NotNull: true, DB: &model.FieldDB{PK: true}},
-		{Name: "patient_run", Type: input.Text(), NotNull: true},
+		{Name: "patient_run", Type: input.Rut(), NotNull: true},
 		{Name: "patient_name", Type: input.Text(), NotNull: true},
-		{Name: "patient_birthday", Type: input.Text()},
+		{Name: "patient_birthday", Type: input.Date()},
+		// Contact stays Text: the seeds carry no phone, and Phone's minimum
+		// would reject every seed row — the widget follows the real data.
 		{Name: "patient_contact", Type: input.Text()},
-		{Name: "day", Type: input.Text(), NotNull: true},
-		{Name: "hour", Type: input.Text(), NotNull: true},
+		{Name: "day", Type: input.Date(), NotNull: true},
+		{Name: "hour", Type: input.Hour(), NotNull: true},
 		{Name: "detail", Type: input.Text()},
 		{Name: "status", Type: input.Text()},
 	},

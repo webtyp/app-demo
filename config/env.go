@@ -58,7 +58,7 @@ func lookupSlug(slug string) string {
 func (e *Env) Specialties() []string {
 	out := &itemcatalog.SpecialtyList{}
 	var callErr error
-	e.caller.Call(itemcatalog.OpListSpecialties,
+	e.caller.Call(itemcatalog.ModelName + "." + itemcatalog.OpListSpecialties,
 		&itemcatalog.ListSpecialtiesArgs{TenantId: TenantID},
 		out, func(err error) { callErr = err })
 	if callErr != nil {
@@ -222,7 +222,7 @@ func (e *Env) WorkScheduleStaffID(staffID string) int64 {
 func (e *Env) upsertCalendarConfigs() {
 	for _, s := range e.staff {
 		var doneErr error
-		e.caller.Call(ab.OpUpsertCalendarConfig, &ab.UpsertCalendarConfigArgs{
+		e.caller.Call(ab.ModelName + "." + ab.OpUpsertCalendarConfig, &ab.UpsertCalendarConfigArgs{
 			TenantId: TenantID, StaffId: s.ID, Timezone: "America/Santiago", IsActive: true,
 		}, nil, func(err error) { doneErr = err })
 		if doneErr != nil {
@@ -241,7 +241,7 @@ func (e *Env) upsertBlocks() {
 	}
 	// Natasha: Lun–Vie 09:00–18:00 con colación 13:00–14:00 (bloque 1: 09:00–13:00, bloque 2: 14:00–18:00).
 	for dow := int64(1); dow <= 5; dow++ {
-		call(ab.OpSaveDayBlocks, &ab.SaveDayBlocksArgs{
+		call(ab.ModelName + "." + ab.OpSaveDayBlocks, &ab.SaveDayBlocksArgs{
 			TenantId: TenantID, StaffId: "staff-natasha", DayOfWeek: dow,
 			Blocks: []ab.WorkCalendarBlock{
 				{TenantId: TenantID, StaffId: "staff-natasha", DayOfWeek: dow, StartMin: 540, EndMin: 780, IsActive: true},
@@ -251,7 +251,7 @@ func (e *Env) upsertBlocks() {
 	}
 	// Tony: Lun/Mié/Vie 08:00–14:00 sin colación.
 	for _, dow := range []int64{1, 3, 5} {
-		call(ab.OpSaveDayBlocks, &ab.SaveDayBlocksArgs{
+		call(ab.ModelName + "." + ab.OpSaveDayBlocks, &ab.SaveDayBlocksArgs{
 			TenantId: TenantID, StaffId: "staff-tony", DayOfWeek: dow,
 			Blocks: []ab.WorkCalendarBlock{
 				{TenantId: TenantID, StaffId: "staff-tony", DayOfWeek: dow, StartMin: 480, EndMin: 840, IsActive: true},
@@ -271,7 +271,7 @@ func (e *Env) addExceptions() {
 	}
 	// Excepciones de Natasha: 18 y 19 de septiembre 2026 cerrados.
 	for _, d := range []string{"2026-09-18", "2026-09-19"} {
-		call(ab.OpAddCalendarException, &ab.AddCalendarExceptionArgs{
+		call(ab.ModelName + "." + ab.OpAddCalendarException, &ab.AddCalendarExceptionArgs{
 			TenantId: TenantID, StaffId: "staff-natasha",
 			SpecificDate: unixDay(d), ExceptionType: ab.ExcHoliday,
 		})
@@ -323,7 +323,7 @@ func (e *Env) seedEmployeeServiceConfig() {
 func (e *Env) seedReservations() {
 	seeds := []*ab.Reservation{
 		{
-			Id: "res-1", TenantId: TenantID, ClientId: "12345678-9",
+			Id: "res-1", TenantId: TenantID, ClientId: "12345678-5",
 			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
 			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
 			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
@@ -332,7 +332,7 @@ func (e *Env) seedReservations() {
 			Notes: "María Gonzalez", UpdatedAt: unixDay("2026-09-09") * 1000000000,
 		},
 		{
-			Id: "res-2", TenantId: TenantID, ClientId: "98765432-1",
+			Id: "res-2", TenantId: TenantID, ClientId: "98765432-5",
 			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
 			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
 			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
@@ -341,7 +341,7 @@ func (e *Env) seedReservations() {
 			Notes: "Juan Pérez", UpdatedAt: unixDay("2026-09-09") * 1000000000,
 		},
 		{
-			Id: "res-3", TenantId: TenantID, ClientId: "11223344-5",
+			Id: "res-3", TenantId: TenantID, ClientId: "11223344-k",
 			CreatorUserId: "demo", EmployeeServiceConfigId: "escNatashaConsulta",
 			StaffIdsnapshot: "staff-natasha", ServiceIdsnapshot: "svc-consulta",
 			DurationMinSnapshot: 30, Status: ab.StatusConfirmed,
@@ -389,7 +389,7 @@ func (e *Env) seedCatalog() {
 		{TenantId: TenantID, Prefix: "ec", Slug: "ecografia", Name: "Ecografía", Position: 4, IsPublished: true},
 		{TenantId: TenantID, Prefix: "ra", Slug: "radiologia", Name: "Radiología", Position: 5, IsPublished: true},
 	} {
-		call(itemcatalog.OpUpsertSpecialty, &spec)
+		call(itemcatalog.ModelName + "." + itemcatalog.OpUpsertSpecialty, &spec)
 	}
 
 	// Mapear slug → id de las especialidades recién creadas.
@@ -402,7 +402,7 @@ func (e *Env) seedCatalog() {
 	} {
 		it.TenantId = TenantID
 		it.SpecialtyId = lookupSpecialtyID(e, slugForSKU(it.Sku))
-		call(itemcatalog.OpUpsertItem, &it)
+		call(itemcatalog.ModelName + "." + itemcatalog.OpUpsertItem, &it)
 	}
 }
 
@@ -451,7 +451,7 @@ func slugForSKU(sku string) string {
 func lookupSpecialtyID(e *Env, slug string) string {
 	out := &itemcatalog.SpecialtyList{}
 	var callErr error
-	e.caller.Call(itemcatalog.OpListSpecialties,
+	e.caller.Call(itemcatalog.ModelName + "." + itemcatalog.OpListSpecialties,
 		&itemcatalog.ListSpecialtiesArgs{TenantId: TenantID},
 		out, func(err error) { callErr = err })
 	if callErr != nil {

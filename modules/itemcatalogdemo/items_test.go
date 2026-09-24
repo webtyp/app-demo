@@ -98,7 +98,7 @@ func TestCreateItem_GoesThroughRealOp(t *testing.T) {
 	// Upsert vía la op real (la misma que view.Ops.Save usa cuando el form
 	// guarda un ítem nuevo). Sin Id: la op crea.
 	var upsertErr error
-	caller.Call(itemcatalog.OpUpsertItem, &itemcatalog.CatalogItem{
+	caller.Call(itemcatalog.ModelName+"."+itemcatalog.OpUpsertItem, &itemcatalog.CatalogItem{
 		TenantId:    config.TenantID,
 		SpecialtyId: specID,
 		Sku:         "md-nueva",
@@ -134,7 +134,7 @@ func lookupTestSpecialty(t *testing.T, caller router.Caller, slug string) string
 	t.Helper()
 	out := &itemcatalog.SpecialtyList{}
 	var callErr error
-	caller.Call(itemcatalog.OpListSpecialties,
+	caller.Call(itemcatalog.ModelName+"."+itemcatalog.OpListSpecialties,
 		&itemcatalog.ListSpecialtiesArgs{TenantId: config.TenantID},
 		out, func(err error) { callErr = err })
 	if callErr != nil {

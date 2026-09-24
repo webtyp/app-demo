@@ -3,25 +3,25 @@ module webtyp.com/app-demo
 go 1.25.2
 
 require (
-	github.com/veltylabs/appointment_booking v0.1.10
-	github.com/veltylabs/item_catalog v0.3.4
+	github.com/veltylabs/appointment_booking v0.1.13
+	github.com/veltylabs/item_catalog v0.3.8
 	github.com/veltylabs/work_schedule v0.1.6
-	webtyp.com/components v0.6.31
+	webtyp.com/components v0.6.33
 	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.16
 	webtyp.com/events v0.0.5
 	webtyp.com/fmt v1.0.0
 	webtyp.com/html v0.0.24
 	webtyp.com/input v0.0.9
-	webtyp.com/layout v0.2.47
+	webtyp.com/layout v0.2.56
 	webtyp.com/model v0.2.0
 	webtyp.com/orm v0.12.4
-	webtyp.com/router v0.1.39
+	webtyp.com/router v0.1.42
 	webtyp.com/storage v0.1.0
 	webtyp.com/svg v0.3.14
 	webtyp.com/time v0.5.6
 	webtyp.com/unixid v0.2.28
-	webtyp.com/view v0.6.0
+	webtyp.com/view v0.6.10
 	webtyp.com/widget v0.6.32
 )
 

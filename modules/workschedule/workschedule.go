@@ -6,7 +6,10 @@ package workschedule
 
 import (
 	"webtyp.com/layout/platformd"
+	"webtyp.com/model"
+	"webtyp.com/router"
 	"webtyp.com/svg"
+	"webtyp.com/view"
 	"webtyp.com/widget"
 
 	. "webtyp.com/dom"
@@ -87,16 +90,51 @@ func (s *ScheduleList) Init(_ Ctx) {
 	s.reload()
 }
 
+// scheduleLister is a view.Lister over get_work_schedule: it flattens the
+// nested StaffResponse into ScheduleEntry rows. It mirrors work_schedule's
+// own lister, except for the op name: v0.1.6 still calls it bare, unknown
+// since router qualifies every op by module — remove this when the module
+// qualifies its client.
+type scheduleLister struct {
+	caller  router.Caller
+	staffID int64
+}
+
+func (l scheduleLister) List(done func([]model.Model, error)) {
+	resp := &ws.StaffResponse{}
+	l.caller.Call(
+		"work_schedule."+ws.OpGetWorkSchedule,
+		&ws.GetWorkScheduleArgs{StaffId: l.staffID},
+		resp,
+		func(err error) {
+			if err != nil {
+				done(nil, err)
+				return
+			}
+			rows := make([]model.Model, 0, len(resp.Schedule))
+			for i := range resp.Schedule {
+				rows = append(rows, &resp.Schedule[i])
+			}
+			done(rows, nil)
+		},
+	)
+}
+
+var _ view.Lister = scheduleLister{}
+
 // reload re-llena la lista del profesional elegido con las filas de
-// workschedule.NewView (lista read-only sobre sus tablas). El resultado llega
-// por el done callback del Presenter — se pinta desde adentro, nunca bloqueando.
+// get_work_schedule vía el lister local — el módulo solo lee.
 func (s *ScheduleList) reload() {
 	wsStaffID := s.env.WorkScheduleStaffID(s.sel.Get())
 	if wsStaffID == 0 {
 		s.items.Set([]*Element{Li().Text("Sin horario registrado")})
 		return
 	}
-	pres := ws.NewView(s.env.Caller(), wsStaffID)
+	pres := view.New(
+		scheduleLister{caller: s.env.Caller(), staffID: wsStaffID},
+		&ws.ScheduleEntry{},
+		view.WithTitle("Horario (sistema legado)"),
+	)
 	pres.Reload(func(err error) {
 		nodes := []*Element{}
 		if err == nil {

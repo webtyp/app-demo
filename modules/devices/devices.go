@@ -61,7 +61,9 @@ func (m *Module) View() Component {
 	cv.OnSaved = func(err error) {
 		if err == nil {
 			m.p.Notify(Msg.Success, "Guardado", platformd.Auto())
+			return
 		}
+		m.p.Notify(Msg.Error, err.Error(), platformd.Auto())
 	}
 	cv.OnDeleted = func(ids []string, err error) {
 		if err != nil || len(ids) == 0 {

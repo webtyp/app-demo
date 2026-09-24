@@ -7,9 +7,9 @@ import (
 	"webtyp.com/view"
 )
 
-// Regression net for the silent save breakage: the store used to assert the
-// singular *Device payload, but view ships saveArgs{records}, so every save
-// errored unheard and the "Guardado" toast never fired. Now the wire is read.
+// Save and update through the real presenter into the real orm.DB: this
+// exercises the store, not the UI save flow — that one (form, validation,
+// crudview) is pinned by the libraries' own suites and the seed guard here.
 func TestMemCallerSaveThroughThePresenter(t *testing.T) {
 	db := newSeededDeviceDB()
 	pres := view.New(&deviceStore{db: db}, &Device{}, view.WithTitle("t"))
