@@ -8,9 +8,10 @@ require (
 	github.com/veltylabs/work_schedule v0.1.6
 	webtyp.com/components v0.6.33
 	webtyp.com/css v0.4.22
-	webtyp.com/dom v0.13.16
+	webtyp.com/dom v0.13.17
 	webtyp.com/events v0.0.5
 	webtyp.com/fmt v1.0.0
+	webtyp.com/form v0.4.17
 	webtyp.com/html v0.0.24
 	webtyp.com/input v0.0.9
 	webtyp.com/layout v0.2.56
@@ -28,9 +29,7 @@ require (
 require (
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/date v0.0.7 // indirect
-	webtyp.com/ddl v0.0.15 // indirect
 	webtyp.com/font v0.0.5 // indirect
-	webtyp.com/form v0.4.17 // indirect
 	webtyp.com/icons v0.0.7 // indirect
 	webtyp.com/json v0.5.25 // indirect
 )
